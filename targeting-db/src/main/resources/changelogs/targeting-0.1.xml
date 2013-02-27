@@ -1,14 +1,93 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-        logicalFilePath="/usr/share/datapipe/db/datapipe.xml"
+        logicalFilePath="/usr/share/targeting/db/targeting.xml"
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
 
-
     <changeSet id="0.1" author="svnovikov">
         <tagDatabase tag="0.1"/>
-    </changeSet>    
-    
+    </changeSet>
+
+    <changeSet id="0.1-1" author="svnovikov">
+        <sql>
+            CREATE SCHEMA dict;
+            CREATE SCHEMA obj;
+            CREATE SCHEMA conf;
+        </sql>
+        <rollback>
+            <sql>
+                DROP SCHEMA dict;
+                DROP SCHEMA obj;
+                DROP SCHEMA conf;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-2" author="svnovikov">
+        <createTable tableName="type" schemaName="dict" remarks="Типы контента">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="mtype" type="varchar" remarks="Строка, передаваемая в запросе в поле mtype">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="varchar" remarks="Описание типа">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что запись удалена" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="priority" schemaName="dict" remarks="Приоритеты">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="value" type="varchar" remarks="Числовое значение приоритета">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="varchar" remarks="Описание приоритета">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что запись удалена" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="attr" schemaName="dict" remarks="Атрибуты таргетинга">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tag" type="varchar" remarks="Сокращение, используемое при передаче данных">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="varchar" remarks="Имя атрибута">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что запись удалена" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="attr_value" schemaName="dict" remarks="Значения атрибутов таргетинга">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="aid" type="integer" remarks="ИД атрибута">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="varchar" remarks="Значение атрибута">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что запись удалена" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_attr_value_aid"
+                                 baseTableName="attr_value" baseColumnNames="aid"
+                                 baseTableSchemaName="dict"
+                                 referencedTableName="attr" referencedTableSchemaName="dict"
+                                 referencedColumnNames="id" deleteCascade="true"/>
+    </changeSet>
+
+
 </databaseChangeLog>
