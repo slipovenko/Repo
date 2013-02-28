@@ -203,4 +203,67 @@
                                  onDelete="CASCADE" onUpdate="CASCADE"/>
     </changeSet>
 
+    <changeSet id="0.1-4" author="svnovikov">
+        <createTable tableName="status" schemaName="conf" remarks="Статус конфигурации">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="value" type="smallint" remarks="Значение статуса конфигурации" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="utime" type="DATETIME" remarks="Время обновления статуса" defaultValueComputed="now()"/>
+            <column name="cid" type="smallint" remarks="Текущая версия конфигурации (0 или 1)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_status_appid"
+                                 baseTableName="status" baseTableSchemaName="conf"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+        <createTable tableName="current" schemaName="conf" remarks="Текущая конфигурация">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="oid" type="integer" remarks="ИД рекламного материала">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attr" type="varchar" remarks="Список значений атрибутов таргетинга"/>
+            <column name="weight" type="integer" remarks="Статистический вес">
+                <constraints nullable="false"/>
+            </column>
+            <column name="priorityid" type="integer" remarks="ИД приоритета">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cid" type="smallint" remarks="Текущая версия конфигурации (0 или 1)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_current_appid"
+                                 baseTableName="current" baseTableSchemaName="conf"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <addForeignKeyConstraint constraintName="fk_current_oid"
+                                 baseTableName="current" baseTableSchemaName="conf"
+                                 baseColumnNames="oid"
+                                 referencedTableName="ado" referencedTableSchemaName="obj"
+                                 referencedColumnNames="id"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <addForeignKeyConstraint constraintName="fk_current_priorityid"
+                                 baseTableName="current" baseTableSchemaName="conf"
+                                 baseColumnNames="priorityid"
+                                 referencedTableName="priority" referencedTableSchemaName="dict"
+                                 referencedColumnNames="id"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+    </changeSet>
+
 </databaseChangeLog>
