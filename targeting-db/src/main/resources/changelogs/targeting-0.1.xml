@@ -83,11 +83,124 @@
             </column>
         </createTable>
         <addForeignKeyConstraint constraintName="fk_attr_value_aid"
-                                 baseTableName="attr_value" baseColumnNames="aid"
-                                 baseTableSchemaName="dict"
+                                 baseTableName="attr_value" baseTableSchemaName="dict"
+                                 baseColumnNames="aid"
                                  referencedTableName="attr" referencedTableSchemaName="dict"
-                                 referencedColumnNames="id" deleteCascade="true"/>
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
     </changeSet>
 
+    <changeSet id="0.1-3" author="svnovikov">
+        <createTable tableName="app" schemaName="obj" remarks="Приложения">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="varchar" remarks="Описание приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что объект удален" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="ado" schemaName="obj" remarks="Рекламные материалы">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID" remarks="UUID объекта">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="flink" type="integer" remarks="Ссылка на файл объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ilink" type="integer" remarks="Ссылка на изображение объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tid" type="integer" remarks="ИД типа контента">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar" remarks="Имя объекта"/>
+            <column name="attr" type="varchar" remarks="Список значений атрибутов таргетинга"/>
+            <column name="deleted" type="boolean" remarks="Флаг, что объект удален" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_ado_appid"
+                                 baseTableName="ado" baseTableSchemaName="obj"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <addForeignKeyConstraint constraintName="fk_ado_tid"
+                                 baseTableName="ado" baseTableSchemaName="obj"
+                                 baseColumnNames="tid"
+                                 referencedTableName="type" referencedTableSchemaName="dict"
+                                 referencedColumnNames="id"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <createTable tableName="group" schemaName="obj" remarks="Группы рекламных материалов">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar" remarks="Имя объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attr" type="varchar" remarks="Список значений атрибутов таргетинга"/>
+            <column name="weight" type="integer" remarks="Статистический вес">
+                <constraints nullable="false"/>
+            </column>
+            <column name="priorityid" type="integer" remarks="ИД приоритета">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enable" type="boolean" remarks="Флаг, что объект используется" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что объект удален" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_group_appid"
+                                 baseTableName="group" baseTableSchemaName="obj"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_group_priorityid"
+                                 baseTableName="group" baseTableSchemaName="obj"
+                                 baseColumnNames="priorityid"
+                                 referencedTableName="priority" referencedTableSchemaName="dict"
+                                 referencedColumnNames="id"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <createTable tableName="ado2group" schemaName="obj" remarks="Связь между группами и рекламными материалами">
+            <column name="oid" type="integer" remarks="ИД рекламного материала">
+                <constraints nullable="false"/>
+            </column>
+            <column name="gid" type="integer" remarks="ИД группы">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enable" type="boolean" remarks="Флаг, что запись используется" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_ado2group_oid"
+                                 baseTableName="ado2group" baseTableSchemaName="obj"
+                                 baseColumnNames="oid"
+                                 referencedTableName="ado" referencedTableSchemaName="obj"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_ado2group_gid"
+                                 baseTableName="ado2group" baseTableSchemaName="obj"
+                                 baseColumnNames="gid"
+                                 referencedTableName="group" referencedTableSchemaName="obj"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+    </changeSet>
 
 </databaseChangeLog>
