@@ -8,7 +8,7 @@
     <name>Targeting: Database liquibase scripts</name>
     <properties>
         <liquibase.version>2.0.5</liquibase.version>
-        <postgres.version>9.1-901.jdbc4</postgres.version>
+        <postgres.version>9.2-1002-jdbc4</postgres.version>
     </properties>
     <dependencies>
         <dependency>
@@ -17,7 +17,7 @@
             <version>${liquibase.version}</version>
         </dependency>
         <dependency>
-            <groupId>postgresql</groupId>
+            <groupId>org.jumpmind.symmetric.jdbc</groupId>
             <artifactId>postgresql</artifactId>
             <version>${postgres.version}</version>
         </dependency>
