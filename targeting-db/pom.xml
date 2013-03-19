@@ -35,6 +35,7 @@
                 <postgres.port>5432</postgres.port>
                 <postgres.user>rm</postgres.user>
                 <postgres.password>rm</postgres.password>
+                <liquibase.context>schemas,initdata,testdata</liquibase.context>
             </properties>
 
             <build>
@@ -51,6 +52,7 @@
                             <username>${postgres.user}</username>
                             <password>${postgres.password}</password>
                             <rollbackTag>${project.version}</rollbackTag>
+                            <contexts>${liquibase.context}</contexts>
                         </configuration>
 
                     </plugin>

@@ -10,7 +10,7 @@
         <tagDatabase tag="0.1"/>
     </changeSet>
 
-    <changeSet id="0.1-1" author="svnovikov">
+    <changeSet id="0.1-1" author="svnovikov" context="schemas">
         <sql>
             CREATE SCHEMA dict;
             CREATE SCHEMA obj;
@@ -25,7 +25,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-2" author="svnovikov">
+    <changeSet id="0.1-2" author="svnovikov" context="schemas">
         <createTable tableName="type" schemaName="dict" remarks="Типы контента">
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
@@ -90,7 +90,7 @@
                                  onDelete="CASCADE" onUpdate="CASCADE"/>
     </changeSet>
 
-    <changeSet id="0.1-3" author="svnovikov">
+    <changeSet id="0.1-3" author="svnovikov" context="schemas">
         <createTable tableName="app" schemaName="obj" remarks="Приложения">
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
@@ -203,7 +203,7 @@
                                  onDelete="CASCADE" onUpdate="CASCADE"/>
     </changeSet>
 
-    <changeSet id="0.1-4" author="svnovikov">
+    <changeSet id="0.1-4" author="svnovikov" context="schemas">
         <createTable tableName="status" schemaName="conf" remarks="Статус конфигурации">
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
