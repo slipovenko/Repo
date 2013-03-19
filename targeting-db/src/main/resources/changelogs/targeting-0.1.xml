@@ -266,4 +266,24 @@
                                  onDelete="RESTRICT" onUpdate="RESTRICT"/>
     </changeSet>
 
+    <changeSet id="0.1-5" author="svnovikov" context="initdata">
+        <insert tableName="type" schemaName="dict">
+            <column name="mtype" value="image"/>
+            <column name="name" value="Изображение"/>
+        </insert>
+        <insert tableName="type" schemaName="dict">
+            <column name="mtype" value="video"/>
+            <column name="name" value="Видео"/>
+        </insert>
+        <insert tableName="type" schemaName="dict">
+            <column name="mtype" value="swf"/>
+            <column name="name" value="Flash-анимация"/>
+        </insert>
+        <rollback>
+            <delete tableName="type" schemaName="dict">
+                <where>mtype IN ('image','video','swf')</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>
