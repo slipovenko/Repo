@@ -44,7 +44,7 @@
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="value" type="varchar" remarks="Числовое значение приоритета">
+            <column name="value" type="integer" remarks="Числовое значение приоритета">
                 <constraints nullable="false" unique="true"/>
             </column>
             <column name="name" type="varchar" remarks="Описание приоритета">
@@ -280,9 +280,29 @@
             <column name="name" value="Flash-анимация"/>
         </insert>
         <rollback>
-            <delete tableName="type" schemaName="dict">
-                <where>mtype IN ('image','video','swf')</where>
-            </delete>
+            <sql>
+                TRUNCATE TABLE dict.type CASCADE;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-6" author="svnovikov" context="initdata">
+        <insert tableName="priority" schemaName="dict">
+            <column name="value" valueNumeric="10"/>
+            <column name="name" value="Низкий"/>
+        </insert>
+        <insert tableName="priority" schemaName="dict">
+            <column name="value" valueNumeric="100"/>
+            <column name="name" value="Обычный"/>
+        </insert>
+        <insert tableName="priority" schemaName="dict">
+            <column name="value" valueNumeric="1000"/>
+            <column name="name" value="Высокий"/>
+        </insert>
+        <rollback>
+            <sql>
+                TRUNCATE TABLE dict.priority CASCADE;
+            </sql>
         </rollback>
     </changeSet>
 
