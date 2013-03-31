@@ -306,4 +306,28 @@
         </rollback>
     </changeSet>
 
+    <changeSet id="0.1-7" author="svnovikov" context="initdata">
+        <insert tableName="attr" schemaName="dict">
+            <column name="tag" value="geo"/>
+            <column name="name" value="Гео-локация"/>
+        </insert>
+        <insert tableName="attr" schemaName="dict">
+            <column name="tag" value="gen"/>
+            <column name="name" value="Пол"/>
+        </insert>
+        <insert tableName="attr" schemaName="dict">
+            <column name="tag" value="age"/>
+            <column name="name" value="Возраст"/>
+        </insert>
+        <insert tableName="attr" schemaName="dict">
+            <column name="tag" value="con"/>
+            <column name="name" value="Контекст"/>
+        </insert>
+        <rollback>
+            <sql>
+                TRUNCATE TABLE dict.attr CASCADE;
+            </sql>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>
