@@ -78,10 +78,14 @@
             <column name="value" type="varchar" remarks="Значение атрибута">
                 <constraints nullable="false"/>
             </column>
+            <column name="name" type="varchar" remarks="Строковая метка"/>
             <column name="deleted" type="boolean" remarks="Флаг, что запись удалена" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
         </createTable>
+        <addUniqueConstraint     constraintName="unq_attr_value_aid_value"
+                                 tableName="attr_value" schemaName="dict"
+                                 columnNames="aid,value"/>
         <addForeignKeyConstraint constraintName="fk_attr_value_aid"
                                  baseTableName="attr_value" baseTableSchemaName="dict"
                                  baseColumnNames="aid"
@@ -326,6 +330,199 @@
         <rollback>
             <sql>
                 TRUNCATE TABLE dict.attr CASCADE;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-8" author="svnovikov">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION dict.attr_add_value(character varying, character varying, character varying)
+              RETURNS void AS
+            $BODY$
+                DECLARE
+                    aid integer;
+                BEGIN
+
+                    SELECT id INTO aid FROM dict.attr WHERE tag=$1;
+                    IF NOT FOUND THEN
+                        RAISE EXCEPTION 'Attribute with tag "%" not exist', $1;
+                    END IF;
+                    INSERT INTO dict.attr_value(aid,value,name) VALUES (aid,$2,$3);
+                END;
+                $BODY$
+              LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+              COST 100;
+        </createProcedure>
+        <sql>
+            -- GeoIP
+            SELECT dict.attr_add_value('geo','0','Не определен');
+            SELECT dict.attr_add_value('geo','10010001','Россия;Центр;Москва и область');
+            SELECT dict.attr_add_value('geo','10010002','Россия;Центр;Белгород и область');
+            SELECT dict.attr_add_value('geo','10010003','Россия;Центр;Брянск и область');
+            SELECT dict.attr_add_value('geo','10010004','Россия;Центр;Владимир и область');
+            SELECT dict.attr_add_value('geo','10010005','Россия;Центр;Воронеж и область');
+            SELECT dict.attr_add_value('geo','10010006','Россия;Центр;Иваново и область');
+            SELECT dict.attr_add_value('geo','10010007','Россия;Центр;Калуга и область');
+            SELECT dict.attr_add_value('geo','10010008','Россия;Центр;Кострома и область');
+            SELECT dict.attr_add_value('geo','10010009','Россия;Центр;Курск и область');
+            SELECT dict.attr_add_value('geo','10010010','Россия;Центр;Липецк и область');
+            SELECT dict.attr_add_value('geo','10010011','Россия;Центр;Орел и область');
+            SELECT dict.attr_add_value('geo','10010012','Россия;Центр;Рязань и область');
+            SELECT dict.attr_add_value('geo','10010013','Россия;Центр;Смоленск и область');
+            SELECT dict.attr_add_value('geo','10010014','Россия;Центр;Тамбов и область');
+            SELECT dict.attr_add_value('geo','10010015','Россия;Центр;Тверь и область');
+            SELECT dict.attr_add_value('geo','10010016','Россия;Центр;Тула и область');
+            SELECT dict.attr_add_value('geo','10010017','Россия;Центр;Ярославль и область');
+            SELECT dict.attr_add_value('geo','10020001','Россия;Северо-Запад;Санкт-Петербург и Ленинградская область');
+            SELECT dict.attr_add_value('geo','10020002','Россия;Северо-Запад;Архангельск и область');
+            SELECT dict.attr_add_value('geo','10020003','Россия;Северо-Запад;Великий Новгород и Новгородская область');
+            SELECT dict.attr_add_value('geo','10020004','Россия;Северо-Запад;Вологда и область');
+            SELECT dict.attr_add_value('geo','10020005','Россия;Северо-Запад;Калининград и область');
+            SELECT dict.attr_add_value('geo','10020006','Россия;Северо-Запад;Мурманск и область');
+            SELECT dict.attr_add_value('geo','10020007','Россия;Северо-Запад;Ненецкий автономный округ');
+            SELECT dict.attr_add_value('geo','10020008','Россия;Северо-Запад;Псков и область');
+            SELECT dict.attr_add_value('geo','10020009','Россия;Северо-Запад;Республика Карелия (Петрозаводск)');
+            SELECT dict.attr_add_value('geo','10020010','Россия;Северо-Запад;Республика Коми (Сыктывкар)');
+            SELECT dict.attr_add_value('geo','10030001','Россия;Поволжье;Киров и область');
+            SELECT dict.attr_add_value('geo','10030002','Россия;Поволжье;Нижний Новгород и область');
+            SELECT dict.attr_add_value('geo','10030003','Россия;Поволжье;Оренбург и область');
+            SELECT dict.attr_add_value('geo','10030004','Россия;Поволжье;Пенза и область');
+            SELECT dict.attr_add_value('geo','10030005','Россия;Поволжье;Пермский край');
+            SELECT dict.attr_add_value('geo','10030006','Россия;Поволжье;Республика Башкортостан (Уфа)');
+            SELECT dict.attr_add_value('geo','10030007','Россия;Поволжье;Республика Марий Эл (Йошкар-Ола)');
+            SELECT dict.attr_add_value('geo','10030008','Россия;Поволжье;Республика Мордовия (Саранск)');
+            SELECT dict.attr_add_value('geo','10030009','Россия;Поволжье;Республика Татарстан (Казань)');
+            SELECT dict.attr_add_value('geo','10030010','Россия;Поволжье;Самара и область');
+            SELECT dict.attr_add_value('geo','10030011','Россия;Поволжье;Саратов и область');
+            SELECT dict.attr_add_value('geo','10030012','Россия;Поволжье;Удмуртская Республика (Ижевск)');
+            SELECT dict.attr_add_value('geo','10030013','Россия;Поволжье;Ульяновск и область');
+            SELECT dict.attr_add_value('geo','10030014','Россия;Поволжье;Чувашская Республика (Чебоксары)');
+            SELECT dict.attr_add_value('geo','10040001','Россия;Юг;Астрахань и область');
+            SELECT dict.attr_add_value('geo','10040002','Россия;Юг;Волгоград и область');
+            SELECT dict.attr_add_value('geo','10040003','Россия;Юг;Карачаево-Черкесская Республика (Черкесск)');
+            SELECT dict.attr_add_value('geo','10040004','Россия;Юг;Краснодарский край');
+            SELECT dict.attr_add_value('geo','10040005','Россия;Юг;Республика Адыгея (Майкоп)');
+            SELECT dict.attr_add_value('geo','10040006','Россия;Юг;Республика Дагестан (Махачкала)');
+            SELECT dict.attr_add_value('geo','10040007','Россия;Юг;Республика Ингушетия (Магас)');
+            SELECT dict.attr_add_value('geo','10040008','Россия;Юг;Республика Кабардино-Балкария (Нальчик)');
+            SELECT dict.attr_add_value('geo','10040009','Россия;Юг;Республика Калмыкия (Элиста)');
+            SELECT dict.attr_add_value('geo','10040010','Россия;Юг;Республика Северная Осетия-Алания (Владикавказ)');
+            SELECT dict.attr_add_value('geo','10040011','Россия;Юг;Ростов-на-Дону и область');
+            SELECT dict.attr_add_value('geo','10040012','Россия;Юг;Ставропольский край');
+            SELECT dict.attr_add_value('geo','10040013','Россия;Юг;Чеченская Республика (Грозный)');
+            SELECT dict.attr_add_value('geo','10050001','Россия;Сибирь;Алтайский край (Барнаул)');
+            SELECT dict.attr_add_value('geo','10050002','Россия;Сибирь;Забайкальский край (Чита)');
+            SELECT dict.attr_add_value('geo','10050003','Россия;Сибирь;Иркутск и область');
+            SELECT dict.attr_add_value('geo','10050004','Россия;Сибирь;Кемерово и область');
+            SELECT dict.attr_add_value('geo','10050005','Россия;Сибирь;Красноярский край');
+            SELECT dict.attr_add_value('geo','10050006','Россия;Сибирь;Новосибирск и область');
+            SELECT dict.attr_add_value('geo','10050007','Россия;Сибирь;Омск и область');
+            SELECT dict.attr_add_value('geo','10050008','Россия;Сибирь;Республика Алтай (Горно-Алтайск)');
+            SELECT dict.attr_add_value('geo','10050009','Россия;Сибирь;Республика Бурятия (Улан-Удэ)');
+            SELECT dict.attr_add_value('geo','10050010','Россия;Сибирь;Республика Хакасия (Абакан)');
+            SELECT dict.attr_add_value('geo','10050011','Россия;Сибирь;Томск и область');
+            SELECT dict.attr_add_value('geo','10050012','Россия;Сибирь;Республика Тыва (Кызыл)');
+            SELECT dict.attr_add_value('geo','10060001','Россия;Дальний Восток;Благовещенск и Амурская область');
+            SELECT dict.attr_add_value('geo','10060002','Россия;Дальний Восток;Еврейская автономная область (Биробиджан)');
+            SELECT dict.attr_add_value('geo','10060003','Россия;Дальний Восток;Камчатский край (Петропавловск-Камчатский)');
+            SELECT dict.attr_add_value('geo','10060004','Россия;Дальний Восток;Магадан и область');
+            SELECT dict.attr_add_value('geo','10060005','Россия;Дальний Восток;Приморский край (Владивосток)');
+            SELECT dict.attr_add_value('geo','10060006','Россия;Дальний Восток;Республика Саха (Якутия)');
+            SELECT dict.attr_add_value('geo','10060007','Россия;Дальний Восток;Хабаровский край');
+            SELECT dict.attr_add_value('geo','10060008','Россия;Дальний Восток;Южно-Сахалинск и Сахалинская область');
+            SELECT dict.attr_add_value('geo','10060009','Россия;Дальний Восток;Чукотка');
+            SELECT dict.attr_add_value('geo','10070001','Россия;Урал;Екатеринбург и Свердловская область');
+            SELECT dict.attr_add_value('geo','10070002','Россия;Урал;Курган и область');
+            SELECT dict.attr_add_value('geo','10070003','Россия;Урал;Тюмень и область');
+            SELECT dict.attr_add_value('geo','10070004','Россия;Урал;Ханты-Мансийский АО');
+            SELECT dict.attr_add_value('geo','10070005','Россия;Урал;Челябинск и область');
+            SELECT dict.attr_add_value('geo','10070006','Россия;Урал;Ямало-Ненецкий АО (Салехард)');
+            SELECT dict.attr_add_value('geo','20010000','СНГ (исключая Россию);Азербайджан;');
+            SELECT dict.attr_add_value('geo','20020000','СНГ (исключая Россию);Армения;');
+            SELECT dict.attr_add_value('geo','20030000','СНГ (исключая Россию);Беларусь;');
+            SELECT dict.attr_add_value('geo','20040000','СНГ (исключая Россию);Грузия;');
+            SELECT dict.attr_add_value('geo','20050000','СНГ (исключая Россию);Казахстан;');
+            SELECT dict.attr_add_value('geo','20060000','СНГ (исключая Россию);Киргизия;');
+            SELECT dict.attr_add_value('geo','20070000','СНГ (исключая Россию);Молдова;');
+            SELECT dict.attr_add_value('geo','20080000','СНГ (исключая Россию);Таджикистан;');
+            SELECT dict.attr_add_value('geo','20090000','СНГ (исключая Россию);Туркмения;');
+            SELECT dict.attr_add_value('geo','20100000','СНГ (исключая Россию);Узбекистан;');
+            SELECT dict.attr_add_value('geo','20110000','СНГ (исключая Россию);Украина;');
+            SELECT dict.attr_add_value('geo','30010000','Европа;Австрия;');
+            SELECT dict.attr_add_value('geo','30020000','Европа;Бельгия;');
+            SELECT dict.attr_add_value('geo','30030000','Европа;Болгария;');
+            SELECT dict.attr_add_value('geo','30040000','Европа;Великобритания;');
+            SELECT dict.attr_add_value('geo','30050000','Европа;Венгрия;');
+            SELECT dict.attr_add_value('geo','30060000','Европа;Германия;');
+            SELECT dict.attr_add_value('geo','30070000','Европа;Греция;');
+            SELECT dict.attr_add_value('geo','30080000','Европа;Дания;');
+            SELECT dict.attr_add_value('geo','30090000','Европа;Испания;');
+            SELECT dict.attr_add_value('geo','30100000','Европа;Италия;');
+            SELECT dict.attr_add_value('geo','30110000','Европа;Нидерланды;');
+            SELECT dict.attr_add_value('geo','30120000','Европа;Норвегия;');
+            SELECT dict.attr_add_value('geo','30130000','Европа;Польша;');
+            SELECT dict.attr_add_value('geo','30140000','Европа;Сербия;');
+            SELECT dict.attr_add_value('geo','30150000','Европа;Словакия;');
+            SELECT dict.attr_add_value('geo','30160000','Европа;Словения;');
+            SELECT dict.attr_add_value('geo','30170000','Европа;Латвия;');
+            SELECT dict.attr_add_value('geo','30180000','Европа;Литва;');
+            SELECT dict.attr_add_value('geo','30190000','Европа;Эстония;');
+            SELECT dict.attr_add_value('geo','30200000','Европа;Финляндия;');
+            SELECT dict.attr_add_value('geo','30210000','Европа;Франция;');
+            SELECT dict.attr_add_value('geo','30220000','Европа;Чехия;');
+            SELECT dict.attr_add_value('geo','30230000','Европа;Швейцария;');
+            SELECT dict.attr_add_value('geo','30240000','Европа;Швеция;');
+            SELECT dict.attr_add_value('geo','30250000','Европа;Португалия;');
+            SELECT dict.attr_add_value('geo','39990000','Европа;Другие;');
+            SELECT dict.attr_add_value('geo','40010000','Ближний Восток;Египет;');
+            SELECT dict.attr_add_value('geo','40020000','Ближний Восток;Израиль;');
+            SELECT dict.attr_add_value('geo','40030000','Ближний Восток;Объединенные Арабские Эмираты;');
+            SELECT dict.attr_add_value('geo','40040000','Ближний Восток;Турция;');
+            SELECT dict.attr_add_value('geo','49990000','Ближний Восток;Другие;');
+            SELECT dict.attr_add_value('geo','50010000','Азия;Индия;');
+            SELECT dict.attr_add_value('geo','50020000','Азия;Китай;');
+            SELECT dict.attr_add_value('geo','50030000','Азия;Таиланд;');
+            SELECT dict.attr_add_value('geo','50040000','Азия;Южная Корея;');
+            SELECT dict.attr_add_value('geo','50050000','Азия;Япония;');
+            SELECT dict.attr_add_value('geo','50060000','Азия;Монголия;');
+            SELECT dict.attr_add_value('geo','59990000','Азия;Другие;');
+            SELECT dict.attr_add_value('geo','60000000','Африка;;');
+            SELECT dict.attr_add_value('geo','70010000','Северная Америка;Канада;');
+            SELECT dict.attr_add_value('geo','70020000','Северная Америка;США;');
+            SELECT dict.attr_add_value('geo','79990000','Северная Америка;Другие;');
+            SELECT dict.attr_add_value('geo','80010000','Южная Америка;Аргентина;');
+            SELECT dict.attr_add_value('geo','80020000','Южная Америка;Бразилия;');
+            SELECT dict.attr_add_value('geo','89990000','Южная Америка;Другие;');
+            SELECT dict.attr_add_value('geo','90010000','Австралия и Океания;Австралия;');
+            SELECT dict.attr_add_value('geo','90020000','Австралия и Океания;Новая Зеландия;');
+            SELECT dict.attr_add_value('geo','99990000','Австралия и Океания;Другие;');
+        </sql>
+        <sql>
+            -- Gender
+            SELECT dict.attr_add_value('gen','0','Не определен');
+            SELECT dict.attr_add_value('gen','1','Мужской');
+            SELECT dict.attr_add_value('gen','2','Женский');
+        </sql>
+        <createProcedure>
+            -- Age
+            DO $$
+            DECLARE y integer;
+            BEGIN
+                PERFORM dict.attr_add_value('age','0','Не определен');
+                FOR y IN 1..100 LOOP
+                    PERFORM dict.attr_add_value('age',y::varchar,NULL);
+                END LOOP;
+            END
+            $$;
+        </createProcedure>
+        <sql>
+            -- Context
+            SELECT dict.attr_add_value('con','','Не определен');
+        </sql>
+        <rollback>
+            <sql>
+                TRUNCATE TABLE dict.attr CASCADE;
+                DROP FUNCTION dict.attr_add_value(character varying, character varying, character varying);
             </sql>
         </rollback>
     </changeSet>
