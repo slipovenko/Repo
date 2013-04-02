@@ -15,12 +15,14 @@
             CREATE SCHEMA dict;
             CREATE SCHEMA obj;
             CREATE SCHEMA conf;
+            CREATE EXTENSION "uuid-ossp";
         </sql>
         <rollback>
             <sql>
                 DROP SCHEMA dict;
                 DROP SCHEMA obj;
                 DROP SCHEMA conf;
+                DROP EXTENSION "uuid-ossp";
             </sql>
         </rollback>
     </changeSet>
@@ -119,10 +121,10 @@
             <column name="uuid" type="UUID" remarks="UUID объекта">
                 <constraints nullable="false" unique="true"/>
             </column>
-            <column name="flink" type="integer" remarks="Ссылка на файл объекта">
+            <column name="flink" type="varchar" remarks="Ссылка на файл объекта">
                 <constraints nullable="false"/>
             </column>
-            <column name="ilink" type="integer" remarks="Ссылка на изображение объекта">
+            <column name="ilink" type="varchar" remarks="Ссылка на изображение объекта">
                 <constraints nullable="false"/>
             </column>
             <column name="tid" type="integer" remarks="ИД типа контента">
@@ -193,6 +195,9 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
+        <addPrimaryKey constraintName="pk_ado2group"
+                       tableName="ado2group" schemaName="obj"
+                       columnNames="oid,gid"/>
         <addForeignKeyConstraint constraintName="fk_ado2group_oid"
                                  baseTableName="ado2group" baseTableSchemaName="obj"
                                  baseColumnNames="oid"
@@ -334,7 +339,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-8" author="svnovikov">
+    <changeSet id="0.1-8" author="svnovikov" context="initdata">
         <createProcedure>
             CREATE OR REPLACE FUNCTION dict.attr_add_value(character varying, character varying, character varying)
               RETURNS void AS
@@ -523,6 +528,59 @@
             <sql>
                 TRUNCATE TABLE dict.attr CASCADE;
                 DROP FUNCTION dict.attr_add_value(character varying, character varying, character varying);
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-9" author="svnovikov" context="testdata">
+        <sql>
+            -- Test objects
+            INSERT INTO obj.app
+            (id, appid, name, deleted)
+            VALUES
+            (1, 1001, 'Объявления ВКонтакте', false),
+            (2, 1002, 'Для старых партнеров', true),
+            (3, 1003, 'Московской Комсомолец', false);
+            SELECT setval('obj.app_id_seq', 3);
+
+            INSERT INTO obj.ado
+            (id, appid, uuid, flink, ilink, tid, name, attr, deleted)
+            VALUES
+            (1, 1001, 'd2fbf3e5-3cc0-4def-a512-0b87e69138c8', 'http://test.ru/0001.swf', 'http://test.ru/0001.jpg', 3, 'Баннер 001', NULL, false),
+            (2, 1001, '6ee9ccc4-2cb6-45fd-b4ae-c7a09f8faee1', 'http://test.ru/0002.swf', 'http://test.ru/0002.jpg', 3, 'Баннер 002', NULL, true),
+            (3, 1002, '84de256f-ba57-4c6f-ae6d-d9901bb302f6', 'http://test.ru/0003.swf', 'http://test.ru/0003.jpg', 3, 'Баннер 003', NULL, true),
+            (4, 1003, '881aef88-b809-419a-864f-0d6ef69a1581', 'http://test.ru/0004.swf', 'http://test.ru/0004.jpg', 3, 'Баннер 004', NULL, false),
+            (5, 1003, '0f04b4c5-d6d4-4291-9f8f-c8224783cb80', 'http://test.ru/0005.swf', 'http://test.ru/0005.jpg', 3, 'Баннер 005', NULL, false);
+            SELECT setval('obj.ado_id_seq', 5);
+
+            INSERT INTO obj."group"
+            (id, appid, name, attr, weight, priorityid, enable, deleted)
+            VALUES
+            (1, 1001, 'Группа 001', NULL, 1000, 1, true, false),
+            (2, 1002, 'Группа 002', NULL, 1000, 2, true, true),
+            (3, 1003, 'Группа 003', '', 1000, 3, true, false),
+            (4, 1003, 'Группа 004', '', 1000, 2, true, false);
+            SELECT setval('obj.group_id_seq', 4);
+
+            INSERT INTO obj.ado2group
+            (oid, gid, enable)
+            VALUES
+            (1, 1, true),
+            (2, 1, false),
+            (3, 2, true),
+            (4, 3, true),
+            (5, 3, true),
+            (4, 4, true);
+        </sql>
+        <rollback>
+            <sql>
+                TRUNCATE obj.app CASCADE;
+                TRUNCATE obj.ado CASCADE;
+                TRUNCATE obj."group" CASCADE;
+                TRUNCATE obj.ado2group CASCADE;
+                SELECT setval('obj.app_id_seq', 1);
+                SELECT setval('obj.ado_id_seq', 1);
+                SELECT setval('obj.group_id_seq', 1);
             </sql>
         </rollback>
     </changeSet>
