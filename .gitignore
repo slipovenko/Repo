@@ -1,0 +1,13 @@
+.idea
+*.iml
+*.ipr
+*.deb
+*.iws
+*.class
+*.log
+*~
+**/target/**/*
+build.conf
+target
+ide-files
+build.properties

@@ -1,0 +1,624 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        logicalFilePath="/usr/share/targeting/db/targeting.xml"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+
+    <changeSet id="0.1" author="svnovikov">
+        <tagDatabase tag="0.1"/>
+    </changeSet>
+
+    <changeSet id="0.1-1" author="svnovikov" context="schemas">
+        <sql>
+            CREATE SCHEMA dict;
+            CREATE SCHEMA obj;
+            CREATE SCHEMA conf;
+            CREATE EXTENSION "uuid-ossp";
+            CREATE EXTENSION "hstore";
+        </sql>
+        <rollback>
+            <sql>
+                DROP SCHEMA dict;
+                DROP SCHEMA obj;
+                DROP SCHEMA conf;
+                DROP EXTENSION "uuid-ossp";
+                DROP EXTENSION "hstore";
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-2" author="svnovikov" context="schemas">
+        <createTable tableName="type" schemaName="dict" remarks="Типы контента">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="mtype" type="varchar" remarks="Строка, передаваемая в запросе в поле mtype">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="varchar" remarks="Описание типа">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что запись удалена" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="priority" schemaName="dict" remarks="Приоритеты">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="value" type="integer" remarks="Числовое значение приоритета">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="varchar" remarks="Описание приоритета">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что запись удалена" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="attr" schemaName="dict" remarks="Атрибуты таргетинга">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tag" type="varchar" remarks="Сокращение, используемое при передаче данных">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="varchar" remarks="Имя атрибута">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что запись удалена" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="attr_value" schemaName="dict" remarks="Значения атрибутов таргетинга">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="aid" type="integer" remarks="ИД атрибута">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="varchar" remarks="Значение атрибута">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar" remarks="Строковая метка"/>
+            <column name="deleted" type="boolean" remarks="Флаг, что запись удалена" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint     constraintName="unq_attr_value_aid_value"
+                                 tableName="attr_value" schemaName="dict"
+                                 columnNames="aid,value"/>
+        <addForeignKeyConstraint constraintName="fk_attr_value_aid"
+                                 baseTableName="attr_value" baseTableSchemaName="dict"
+                                 baseColumnNames="aid"
+                                 referencedTableName="attr" referencedTableSchemaName="dict"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="0.1-3" author="svnovikov" context="schemas">
+        <createTable tableName="app" schemaName="obj" remarks="Приложения">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="varchar" remarks="Описание приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что объект удален" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="ado" schemaName="obj" remarks="Рекламные материалы">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID" remarks="UUID объекта">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="flink" type="varchar" remarks="Ссылка на файл объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ilink" type="varchar" remarks="Ссылка на изображение объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tid" type="integer" remarks="ИД типа контента">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar" remarks="Имя объекта"/>
+            <column name="attr" type="varchar" remarks="Список значений атрибутов таргетинга"/>
+            <column name="deleted" type="boolean" remarks="Флаг, что объект удален" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_ado_appid"
+                                 baseTableName="ado" baseTableSchemaName="obj"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <addForeignKeyConstraint constraintName="fk_ado_tid"
+                                 baseTableName="ado" baseTableSchemaName="obj"
+                                 baseColumnNames="tid"
+                                 referencedTableName="type" referencedTableSchemaName="dict"
+                                 referencedColumnNames="id"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <createTable tableName="group" schemaName="obj" remarks="Группы рекламных материалов">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar" remarks="Имя объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attr" type="hstore" remarks="Список значений атрибутов таргетинга"/>
+            <column name="weight" type="integer" remarks="Статистический вес">
+                <constraints nullable="false"/>
+            </column>
+            <column name="priorityid" type="integer" remarks="ИД приоритета">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enable" type="boolean" remarks="Флаг, что объект используется" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" remarks="Флаг, что объект удален" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_group_appid"
+                                 baseTableName="group" baseTableSchemaName="obj"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_group_priorityid"
+                                 baseTableName="group" baseTableSchemaName="obj"
+                                 baseColumnNames="priorityid"
+                                 referencedTableName="priority" referencedTableSchemaName="dict"
+                                 referencedColumnNames="id"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <createTable tableName="ado2group" schemaName="obj" remarks="Связь между группами и рекламными материалами">
+            <column name="oid" type="integer" remarks="ИД рекламного материала">
+                <constraints nullable="false"/>
+            </column>
+            <column name="gid" type="integer" remarks="ИД группы">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enable" type="boolean" remarks="Флаг, что запись используется" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey constraintName="pk_ado2group"
+                       tableName="ado2group" schemaName="obj"
+                       columnNames="oid,gid"/>
+        <addForeignKeyConstraint constraintName="fk_ado2group_oid"
+                                 baseTableName="ado2group" baseTableSchemaName="obj"
+                                 baseColumnNames="oid"
+                                 referencedTableName="ado" referencedTableSchemaName="obj"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_ado2group_gid"
+                                 baseTableName="ado2group" baseTableSchemaName="obj"
+                                 baseColumnNames="gid"
+                                 referencedTableName="group" referencedTableSchemaName="obj"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="0.1-4" author="svnovikov" context="schemas">
+        <createTable tableName="status" schemaName="conf" remarks="Статус конфигурации">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="value" type="smallint" remarks="Значение статуса конфигурации" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="utime" type="DATETIME" remarks="Время обновления статуса" defaultValueComputed="now()"/>
+            <column name="cid" type="smallint" remarks="Текущая версия конфигурации (0 или 1)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_status_appid"
+                                 baseTableName="status" baseTableSchemaName="conf"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+        <createTable tableName="current" schemaName="conf" remarks="Текущая конфигурация">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="oid" type="integer" remarks="ИД рекламного материала">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attr" type="hstore" remarks="Список значений атрибутов таргетинга"/>
+            <column name="weight" type="integer" remarks="Статистический вес">
+                <constraints nullable="false"/>
+            </column>
+            <column name="priorityid" type="integer" remarks="ИД приоритета">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cid" type="smallint" remarks="Текущая версия конфигурации (0 или 1)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_current_appid"
+                                 baseTableName="current" baseTableSchemaName="conf"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <addForeignKeyConstraint constraintName="fk_current_oid"
+                                 baseTableName="current" baseTableSchemaName="conf"
+                                 baseColumnNames="oid"
+                                 referencedTableName="ado" referencedTableSchemaName="obj"
+                                 referencedColumnNames="id"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <addForeignKeyConstraint constraintName="fk_current_priorityid"
+                                 baseTableName="current" baseTableSchemaName="conf"
+                                 baseColumnNames="priorityid"
+                                 referencedTableName="priority" referencedTableSchemaName="dict"
+                                 referencedColumnNames="id"
+                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+    </changeSet>
+
+    <changeSet id="0.1-5" author="svnovikov" context="initdata">
+        <insert tableName="type" schemaName="dict">
+            <column name="mtype" value="image"/>
+            <column name="name" value="Изображение"/>
+        </insert>
+        <insert tableName="type" schemaName="dict">
+            <column name="mtype" value="video"/>
+            <column name="name" value="Видео"/>
+        </insert>
+        <insert tableName="type" schemaName="dict">
+            <column name="mtype" value="swf"/>
+            <column name="name" value="Flash-анимация"/>
+        </insert>
+        <rollback>
+            <sql>
+                TRUNCATE TABLE dict.type CASCADE;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-6" author="svnovikov" context="initdata">
+        <insert tableName="priority" schemaName="dict">
+            <column name="value" valueNumeric="10"/>
+            <column name="name" value="Низкий"/>
+        </insert>
+        <insert tableName="priority" schemaName="dict">
+            <column name="value" valueNumeric="100"/>
+            <column name="name" value="Обычный"/>
+        </insert>
+        <insert tableName="priority" schemaName="dict">
+            <column name="value" valueNumeric="1000"/>
+            <column name="name" value="Высокий"/>
+        </insert>
+        <rollback>
+            <sql>
+                TRUNCATE TABLE dict.priority CASCADE;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-7" author="svnovikov" context="initdata">
+        <insert tableName="attr" schemaName="dict">
+            <column name="tag" value="geo"/>
+            <column name="name" value="Гео-локация"/>
+        </insert>
+        <insert tableName="attr" schemaName="dict">
+            <column name="tag" value="gen"/>
+            <column name="name" value="Пол"/>
+        </insert>
+        <insert tableName="attr" schemaName="dict">
+            <column name="tag" value="age"/>
+            <column name="name" value="Возраст"/>
+        </insert>
+        <insert tableName="attr" schemaName="dict">
+            <column name="tag" value="con"/>
+            <column name="name" value="Контекст"/>
+        </insert>
+        <rollback>
+            <sql>
+                TRUNCATE TABLE dict.attr CASCADE;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-8" author="svnovikov" context="initdata">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION dict.attr_add_value(character varying, character varying, character varying)
+              RETURNS void AS
+            $BODY$
+                DECLARE
+                    aid integer;
+                BEGIN
+
+                    SELECT id INTO aid FROM dict.attr WHERE tag=$1;
+                    IF NOT FOUND THEN
+                        RAISE EXCEPTION 'Attribute with tag "%" not exist', $1;
+                    END IF;
+                    INSERT INTO dict.attr_value(aid,value,name) VALUES (aid,$2,$3);
+                END;
+                $BODY$
+              LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+              COST 100;
+        </createProcedure>
+        <sql>
+            -- GeoIP
+            SELECT dict.attr_add_value('geo','0','Не определен');
+            SELECT dict.attr_add_value('geo','10010001','Россия;Центр;Москва и область');
+            SELECT dict.attr_add_value('geo','10010002','Россия;Центр;Белгород и область');
+            SELECT dict.attr_add_value('geo','10010003','Россия;Центр;Брянск и область');
+            SELECT dict.attr_add_value('geo','10010004','Россия;Центр;Владимир и область');
+            SELECT dict.attr_add_value('geo','10010005','Россия;Центр;Воронеж и область');
+            SELECT dict.attr_add_value('geo','10010006','Россия;Центр;Иваново и область');
+            SELECT dict.attr_add_value('geo','10010007','Россия;Центр;Калуга и область');
+            SELECT dict.attr_add_value('geo','10010008','Россия;Центр;Кострома и область');
+            SELECT dict.attr_add_value('geo','10010009','Россия;Центр;Курск и область');
+            SELECT dict.attr_add_value('geo','10010010','Россия;Центр;Липецк и область');
+            SELECT dict.attr_add_value('geo','10010011','Россия;Центр;Орел и область');
+            SELECT dict.attr_add_value('geo','10010012','Россия;Центр;Рязань и область');
+            SELECT dict.attr_add_value('geo','10010013','Россия;Центр;Смоленск и область');
+            SELECT dict.attr_add_value('geo','10010014','Россия;Центр;Тамбов и область');
+            SELECT dict.attr_add_value('geo','10010015','Россия;Центр;Тверь и область');
+            SELECT dict.attr_add_value('geo','10010016','Россия;Центр;Тула и область');
+            SELECT dict.attr_add_value('geo','10010017','Россия;Центр;Ярославль и область');
+            SELECT dict.attr_add_value('geo','10020001','Россия;Северо-Запад;Санкт-Петербург и Ленинградская область');
+            SELECT dict.attr_add_value('geo','10020002','Россия;Северо-Запад;Архангельск и область');
+            SELECT dict.attr_add_value('geo','10020003','Россия;Северо-Запад;Великий Новгород и Новгородская область');
+            SELECT dict.attr_add_value('geo','10020004','Россия;Северо-Запад;Вологда и область');
+            SELECT dict.attr_add_value('geo','10020005','Россия;Северо-Запад;Калининград и область');
+            SELECT dict.attr_add_value('geo','10020006','Россия;Северо-Запад;Мурманск и область');
+            SELECT dict.attr_add_value('geo','10020007','Россия;Северо-Запад;Ненецкий автономный округ');
+            SELECT dict.attr_add_value('geo','10020008','Россия;Северо-Запад;Псков и область');
+            SELECT dict.attr_add_value('geo','10020009','Россия;Северо-Запад;Республика Карелия (Петрозаводск)');
+            SELECT dict.attr_add_value('geo','10020010','Россия;Северо-Запад;Республика Коми (Сыктывкар)');
+            SELECT dict.attr_add_value('geo','10030001','Россия;Поволжье;Киров и область');
+            SELECT dict.attr_add_value('geo','10030002','Россия;Поволжье;Нижний Новгород и область');
+            SELECT dict.attr_add_value('geo','10030003','Россия;Поволжье;Оренбург и область');
+            SELECT dict.attr_add_value('geo','10030004','Россия;Поволжье;Пенза и область');
+            SELECT dict.attr_add_value('geo','10030005','Россия;Поволжье;Пермский край');
+            SELECT dict.attr_add_value('geo','10030006','Россия;Поволжье;Республика Башкортостан (Уфа)');
+            SELECT dict.attr_add_value('geo','10030007','Россия;Поволжье;Республика Марий Эл (Йошкар-Ола)');
+            SELECT dict.attr_add_value('geo','10030008','Россия;Поволжье;Республика Мордовия (Саранск)');
+            SELECT dict.attr_add_value('geo','10030009','Россия;Поволжье;Республика Татарстан (Казань)');
+            SELECT dict.attr_add_value('geo','10030010','Россия;Поволжье;Самара и область');
+            SELECT dict.attr_add_value('geo','10030011','Россия;Поволжье;Саратов и область');
+            SELECT dict.attr_add_value('geo','10030012','Россия;Поволжье;Удмуртская Республика (Ижевск)');
+            SELECT dict.attr_add_value('geo','10030013','Россия;Поволжье;Ульяновск и область');
+            SELECT dict.attr_add_value('geo','10030014','Россия;Поволжье;Чувашская Республика (Чебоксары)');
+            SELECT dict.attr_add_value('geo','10040001','Россия;Юг;Астрахань и область');
+            SELECT dict.attr_add_value('geo','10040002','Россия;Юг;Волгоград и область');
+            SELECT dict.attr_add_value('geo','10040003','Россия;Юг;Карачаево-Черкесская Республика (Черкесск)');
+            SELECT dict.attr_add_value('geo','10040004','Россия;Юг;Краснодарский край');
+            SELECT dict.attr_add_value('geo','10040005','Россия;Юг;Республика Адыгея (Майкоп)');
+            SELECT dict.attr_add_value('geo','10040006','Россия;Юг;Республика Дагестан (Махачкала)');
+            SELECT dict.attr_add_value('geo','10040007','Россия;Юг;Республика Ингушетия (Магас)');
+            SELECT dict.attr_add_value('geo','10040008','Россия;Юг;Республика Кабардино-Балкария (Нальчик)');
+            SELECT dict.attr_add_value('geo','10040009','Россия;Юг;Республика Калмыкия (Элиста)');
+            SELECT dict.attr_add_value('geo','10040010','Россия;Юг;Республика Северная Осетия-Алания (Владикавказ)');
+            SELECT dict.attr_add_value('geo','10040011','Россия;Юг;Ростов-на-Дону и область');
+            SELECT dict.attr_add_value('geo','10040012','Россия;Юг;Ставропольский край');
+            SELECT dict.attr_add_value('geo','10040013','Россия;Юг;Чеченская Республика (Грозный)');
+            SELECT dict.attr_add_value('geo','10050001','Россия;Сибирь;Алтайский край (Барнаул)');
+            SELECT dict.attr_add_value('geo','10050002','Россия;Сибирь;Забайкальский край (Чита)');
+            SELECT dict.attr_add_value('geo','10050003','Россия;Сибирь;Иркутск и область');
+            SELECT dict.attr_add_value('geo','10050004','Россия;Сибирь;Кемерово и область');
+            SELECT dict.attr_add_value('geo','10050005','Россия;Сибирь;Красноярский край');
+            SELECT dict.attr_add_value('geo','10050006','Россия;Сибирь;Новосибирск и область');
+            SELECT dict.attr_add_value('geo','10050007','Россия;Сибирь;Омск и область');
+            SELECT dict.attr_add_value('geo','10050008','Россия;Сибирь;Республика Алтай (Горно-Алтайск)');
+            SELECT dict.attr_add_value('geo','10050009','Россия;Сибирь;Республика Бурятия (Улан-Удэ)');
+            SELECT dict.attr_add_value('geo','10050010','Россия;Сибирь;Республика Хакасия (Абакан)');
+            SELECT dict.attr_add_value('geo','10050011','Россия;Сибирь;Томск и область');
+            SELECT dict.attr_add_value('geo','10050012','Россия;Сибирь;Республика Тыва (Кызыл)');
+            SELECT dict.attr_add_value('geo','10060001','Россия;Дальний Восток;Благовещенск и Амурская область');
+            SELECT dict.attr_add_value('geo','10060002','Россия;Дальний Восток;Еврейская автономная область (Биробиджан)');
+            SELECT dict.attr_add_value('geo','10060003','Россия;Дальний Восток;Камчатский край (Петропавловск-Камчатский)');
+            SELECT dict.attr_add_value('geo','10060004','Россия;Дальний Восток;Магадан и область');
+            SELECT dict.attr_add_value('geo','10060005','Россия;Дальний Восток;Приморский край (Владивосток)');
+            SELECT dict.attr_add_value('geo','10060006','Россия;Дальний Восток;Республика Саха (Якутия)');
+            SELECT dict.attr_add_value('geo','10060007','Россия;Дальний Восток;Хабаровский край');
+            SELECT dict.attr_add_value('geo','10060008','Россия;Дальний Восток;Южно-Сахалинск и Сахалинская область');
+            SELECT dict.attr_add_value('geo','10060009','Россия;Дальний Восток;Чукотка');
+            SELECT dict.attr_add_value('geo','10070001','Россия;Урал;Екатеринбург и Свердловская область');
+            SELECT dict.attr_add_value('geo','10070002','Россия;Урал;Курган и область');
+            SELECT dict.attr_add_value('geo','10070003','Россия;Урал;Тюмень и область');
+            SELECT dict.attr_add_value('geo','10070004','Россия;Урал;Ханты-Мансийский АО');
+            SELECT dict.attr_add_value('geo','10070005','Россия;Урал;Челябинск и область');
+            SELECT dict.attr_add_value('geo','10070006','Россия;Урал;Ямало-Ненецкий АО (Салехард)');
+            SELECT dict.attr_add_value('geo','20010000','СНГ (исключая Россию);Азербайджан;');
+            SELECT dict.attr_add_value('geo','20020000','СНГ (исключая Россию);Армения;');
+            SELECT dict.attr_add_value('geo','20030000','СНГ (исключая Россию);Беларусь;');
+            SELECT dict.attr_add_value('geo','20040000','СНГ (исключая Россию);Грузия;');
+            SELECT dict.attr_add_value('geo','20050000','СНГ (исключая Россию);Казахстан;');
+            SELECT dict.attr_add_value('geo','20060000','СНГ (исключая Россию);Киргизия;');
+            SELECT dict.attr_add_value('geo','20070000','СНГ (исключая Россию);Молдова;');
+            SELECT dict.attr_add_value('geo','20080000','СНГ (исключая Россию);Таджикистан;');
+            SELECT dict.attr_add_value('geo','20090000','СНГ (исключая Россию);Туркмения;');
+            SELECT dict.attr_add_value('geo','20100000','СНГ (исключая Россию);Узбекистан;');
+            SELECT dict.attr_add_value('geo','20110000','СНГ (исключая Россию);Украина;');
+            SELECT dict.attr_add_value('geo','30010000','Европа;Австрия;');
+            SELECT dict.attr_add_value('geo','30020000','Европа;Бельгия;');
+            SELECT dict.attr_add_value('geo','30030000','Европа;Болгария;');
+            SELECT dict.attr_add_value('geo','30040000','Европа;Великобритания;');
+            SELECT dict.attr_add_value('geo','30050000','Европа;Венгрия;');
+            SELECT dict.attr_add_value('geo','30060000','Европа;Германия;');
+            SELECT dict.attr_add_value('geo','30070000','Европа;Греция;');
+            SELECT dict.attr_add_value('geo','30080000','Европа;Дания;');
+            SELECT dict.attr_add_value('geo','30090000','Европа;Испания;');
+            SELECT dict.attr_add_value('geo','30100000','Европа;Италия;');
+            SELECT dict.attr_add_value('geo','30110000','Европа;Нидерланды;');
+            SELECT dict.attr_add_value('geo','30120000','Европа;Норвегия;');
+            SELECT dict.attr_add_value('geo','30130000','Европа;Польша;');
+            SELECT dict.attr_add_value('geo','30140000','Европа;Сербия;');
+            SELECT dict.attr_add_value('geo','30150000','Европа;Словакия;');
+            SELECT dict.attr_add_value('geo','30160000','Европа;Словения;');
+            SELECT dict.attr_add_value('geo','30170000','Европа;Латвия;');
+            SELECT dict.attr_add_value('geo','30180000','Европа;Литва;');
+            SELECT dict.attr_add_value('geo','30190000','Европа;Эстония;');
+            SELECT dict.attr_add_value('geo','30200000','Европа;Финляндия;');
+            SELECT dict.attr_add_value('geo','30210000','Европа;Франция;');
+            SELECT dict.attr_add_value('geo','30220000','Европа;Чехия;');
+            SELECT dict.attr_add_value('geo','30230000','Европа;Швейцария;');
+            SELECT dict.attr_add_value('geo','30240000','Европа;Швеция;');
+            SELECT dict.attr_add_value('geo','30250000','Европа;Португалия;');
+            SELECT dict.attr_add_value('geo','39990000','Европа;Другие;');
+            SELECT dict.attr_add_value('geo','40010000','Ближний Восток;Египет;');
+            SELECT dict.attr_add_value('geo','40020000','Ближний Восток;Израиль;');
+            SELECT dict.attr_add_value('geo','40030000','Ближний Восток;Объединенные Арабские Эмираты;');
+            SELECT dict.attr_add_value('geo','40040000','Ближний Восток;Турция;');
+            SELECT dict.attr_add_value('geo','49990000','Ближний Восток;Другие;');
+            SELECT dict.attr_add_value('geo','50010000','Азия;Индия;');
+            SELECT dict.attr_add_value('geo','50020000','Азия;Китай;');
+            SELECT dict.attr_add_value('geo','50030000','Азия;Таиланд;');
+            SELECT dict.attr_add_value('geo','50040000','Азия;Южная Корея;');
+            SELECT dict.attr_add_value('geo','50050000','Азия;Япония;');
+            SELECT dict.attr_add_value('geo','50060000','Азия;Монголия;');
+            SELECT dict.attr_add_value('geo','59990000','Азия;Другие;');
+            SELECT dict.attr_add_value('geo','60000000','Африка;;');
+            SELECT dict.attr_add_value('geo','70010000','Северная Америка;Канада;');
+            SELECT dict.attr_add_value('geo','70020000','Северная Америка;США;');
+            SELECT dict.attr_add_value('geo','79990000','Северная Америка;Другие;');
+            SELECT dict.attr_add_value('geo','80010000','Южная Америка;Аргентина;');
+            SELECT dict.attr_add_value('geo','80020000','Южная Америка;Бразилия;');
+            SELECT dict.attr_add_value('geo','89990000','Южная Америка;Другие;');
+            SELECT dict.attr_add_value('geo','90010000','Австралия и Океания;Австралия;');
+            SELECT dict.attr_add_value('geo','90020000','Австралия и Океания;Новая Зеландия;');
+            SELECT dict.attr_add_value('geo','99990000','Австралия и Океания;Другие;');
+        </sql>
+        <sql>
+            -- Gender
+            SELECT dict.attr_add_value('gen','0','Не определен');
+            SELECT dict.attr_add_value('gen','1','Мужской');
+            SELECT dict.attr_add_value('gen','2','Женский');
+        </sql>
+        <createProcedure>
+            -- Age
+            DO $$
+            DECLARE y integer;
+            BEGIN
+                PERFORM dict.attr_add_value('age','0','Не определен');
+                FOR y IN 1..100 LOOP
+                    PERFORM dict.attr_add_value('age',y::varchar,NULL);
+                END LOOP;
+            END
+            $$;
+        </createProcedure>
+        <sql>
+            -- Context
+            SELECT dict.attr_add_value('con','','Не определен');
+        </sql>
+        <rollback>
+            <sql>
+                TRUNCATE TABLE dict.attr CASCADE;
+                DROP FUNCTION dict.attr_add_value(character varying, character varying, character varying);
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-9" author="svnovikov" context="testdata">
+        <sql>
+            -- Test objects
+            INSERT INTO obj.app
+            (id, appid, name, deleted)
+            VALUES
+            (1, 1001, 'Объявления ВКонтакте', false),
+            (2, 1002, 'Для старых партнеров', true),
+            (3, 1003, 'Московской Комсомолец', false);
+            SELECT setval('obj.app_id_seq', 3);
+
+            INSERT INTO obj.ado
+            (id, appid, uuid, flink, ilink, tid, name, attr, deleted)
+            VALUES
+            (1, 1001, 'd2fbf3e5-3cc0-4def-a512-0b87e69138c8', 'http://test.ru/0001.swf', 'http://test.ru/0001.jpg', 3, 'Баннер 001', NULL, false),
+            (2, 1001, '6ee9ccc4-2cb6-45fd-b4ae-c7a09f8faee1', 'http://test.ru/0002.swf', 'http://test.ru/0002.jpg', 3, 'Баннер 002', NULL, true),
+            (3, 1002, '84de256f-ba57-4c6f-ae6d-d9901bb302f6', 'http://test.ru/0003.swf', 'http://test.ru/0003.jpg', 3, 'Баннер 003', NULL, true),
+            (4, 1003, '881aef88-b809-419a-864f-0d6ef69a1581', 'http://test.ru/0004.swf', 'http://test.ru/0004.jpg', 3, 'Баннер 004', NULL, false),
+            (5, 1003, '0f04b4c5-d6d4-4291-9f8f-c8224783cb80', 'http://test.ru/0005.swf', 'http://test.ru/0005.jpg', 3, 'Баннер 005', NULL, false);
+            SELECT setval('obj.ado_id_seq', 5);
+
+            INSERT INTO obj."group"
+            (id, appid, name, attr, weight, priorityid, enable, deleted)
+            VALUES
+            (1, 1001, 'Группа 001', NULL, 1000, 1, true, false),
+            (2, 1002, 'Группа 002', NULL, 1000, 2, true, true),
+            (3, 1003, 'Группа 003', '', 100, 3, true, false),
+            (4, 1003, 'Группа 004', 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 2, true, false);
+            SELECT setval('obj.group_id_seq', 4);
+
+            INSERT INTO obj.ado2group
+            (oid, gid, enable)
+            VALUES
+            (1, 1, true),
+            (2, 1, false),
+            (3, 2, true),
+            (4, 3, true),
+            (5, 3, true),
+            (4, 4, true);
+        </sql>
+        <rollback>
+            <sql>
+                TRUNCATE obj.app CASCADE;
+                TRUNCATE obj.ado CASCADE;
+                TRUNCATE obj."group" CASCADE;
+                TRUNCATE obj.ado2group CASCADE;
+                SELECT setval('obj.app_id_seq', 1);
+                SELECT setval('obj.ado_id_seq', 1);
+                SELECT setval('obj.group_id_seq', 1);
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-10" author="svnovikov" context="testdata">
+        <sql>
+            -- Test configuration
+            INSERT INTO conf.current
+            (id, appid, oid, attr, weight, priorityid, cid)
+            VALUES
+            (1, 1001, 1, NULL, 1000, 1, 0),
+            (2, 1001, 1, NULL, 1000, 2, 1),
+            (3, 1001, 2, NULL, 1000, 2, 1),
+            (4, 1003, 4, '', 1000, 1, 0),
+            (5, 1003, 4, '', 100, 3, 1),
+            (6, 1003, 5, '', 100, 3, 1),
+            (7, 1003, 4, 'gen=>1,age=>18;19;20;21'::hstore, 1000, 2, 0),
+            (8, 1003, 4, 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 2, 1);
+            SELECT setval('conf.current_id_seq', 8);
+
+            INSERT INTO conf.status
+            (id, appid, value, utime, cid)
+            VALUES
+            (1, 1001, 0, now(), 0),
+            (2, 1002, 0, now(), 0),
+            (3, 1003, 0, now(), 1);
+            SELECT setval('conf.status_id_seq', 3);
+        </sql>
+        <rollback>
+            <sql>
+                TRUNCATE conf.current CASCADE;
+                TRUNCATE conf.status CASCADE;
+                SELECT setval('conf.current_id_seq', 1);
+                SELECT setval('conf.status_id_seq', 1);
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

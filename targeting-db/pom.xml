@@ -1,0 +1,64 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.dyndns.mediaondemand</groupId>
+    <artifactId>targeting-db</artifactId>
+    <packaging>jar</packaging>
+    <version>0.1</version>
+    <name>Targeting: Database liquibase scripts</name>
+    <properties>
+        <liquibase.version>2.0.5</liquibase.version>
+        <postgres.version>9.2-1002-jdbc4</postgres.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <version>${liquibase.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jumpmind.symmetric.jdbc</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgres.version}</version>
+        </dependency>
+    </dependencies>
+
+
+    <profiles>
+        <profile>
+            <id>develop</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <postgres.host>localhost</postgres.host>
+                <postgres.port>5432</postgres.port>
+                <postgres.user>rm</postgres.user>
+                <postgres.password>rm</postgres.password>
+                <liquibase.context>schemas,initdata,testdata</liquibase.context>
+            </properties>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.liquibase</groupId>
+                        <artifactId>liquibase-maven-plugin</artifactId>
+                        <version>2.0.5</version>
+
+                        <configuration>
+                            <changeLogFile>src/main/resources/targeting.xml</changeLogFile>
+                            <driver>org.postgresql.Driver</driver>
+                            <url>jdbc:postgresql://${postgres.host}:${postgres.port}/targeting</url>
+                            <username>${postgres.user}</username>
+                            <password>${postgres.password}</password>
+                            <rollbackTag>${project.version}</rollbackTag>
+                            <contexts>${liquibase.context}</contexts>
+                        </configuration>
+
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>
