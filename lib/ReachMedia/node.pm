@@ -5,6 +5,8 @@ use ZMQ;
 use ZMQ::Constants qw(:all);
 use Data::MessagePack;
 use Data::Dumper;
+use Time::HiRes;
+use Switch;
 
 sub new
 {
@@ -26,6 +28,12 @@ sub connect
     die( "Error connecting to server!" )
         if $self->{_sock}->connect( $socket ) != 0;
 
+    send_introduce();
+}
+
+sub send_introduce
+{
+	my($self) = @_;
     my $msg = new ZMQ::Message( $self->{_mp}->pack( {
                                 "command"=>"introduce",
                                 "debug"=>1,
