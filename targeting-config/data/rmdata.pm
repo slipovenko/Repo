@@ -44,7 +44,6 @@ sub out
 	my $header;
 
 	my $obj = $self->{_cgi}->url_param('obj');
-	#my $obj = 'app';
 
 	my $dtype = defined($self->{_cgi}->url_param('dtype')) ? $self->{_cgi}->url_param('dtype') : 'json';
 	if($dtype eq 'json')
@@ -59,8 +58,7 @@ sub out
 	else
 	{
 		$header = "Content-type: text/plain\n\n";
-		print $header.'Unsupported type: $dtype';
-		return;
+		return $header.'Unsupported type: $dtype';
 	}
 
 	switch($obj)
@@ -69,7 +67,7 @@ sub out
 		case 'ado' {$out = $self->out_ado();}
 		case 'group' {$out = $self->out_group();}
 	}
-	print $header.$out;
+	return $header.$out;
 }
 
 sub out_app
