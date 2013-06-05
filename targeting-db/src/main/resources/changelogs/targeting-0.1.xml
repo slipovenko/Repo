@@ -143,7 +143,7 @@
                                  baseColumnNames="appid"
                                  referencedTableName="app" referencedTableSchemaName="obj"
                                  referencedColumnNames="appid"
-                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+                                 onDelete="RESTRICT" onUpdate="CASCADE"/>
         <addForeignKeyConstraint constraintName="fk_ado_tid"
                                  baseTableName="ado" baseTableSchemaName="obj"
                                  baseColumnNames="tid"
@@ -262,7 +262,7 @@
                                  baseColumnNames="appid"
                                  referencedTableName="app" referencedTableSchemaName="obj"
                                  referencedColumnNames="appid"
-                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+                                 onDelete="RESTRICT" onUpdate="CASCADE"/>
         <addForeignKeyConstraint constraintName="fk_current_oid"
                                  baseTableName="current" baseTableSchemaName="conf"
                                  baseColumnNames="oid"
