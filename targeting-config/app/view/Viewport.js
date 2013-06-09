@@ -24,11 +24,10 @@ Ext.define('Targeting.view.Viewport', {
                     layout: 'fit',
                     margins: '5 5 0 0'
                 },{
-                    xtype: 'panel',
+                    xtype: 'groupedit',
                     height: '50%',
                     width: '100%',
                     region: 'south',
-                    layout: 'fit',
                     split: true,
                     margins: '0 5 5 5'
                 }],
@@ -48,11 +47,10 @@ Ext.define('Targeting.view.Viewport', {
                 layout: 'fit',
                 margins: '5 5 0 0'
             },{
-                xtype: 'panel',
+                xtype: 'adoedit',
                 height: '50%',
                 width: '100%',
                 region: 'south',
-                layout: 'fit',
                 split: true,
                 margins: '0 5 5 5'
             }],

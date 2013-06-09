@@ -5,11 +5,14 @@
         ref: 'groupList',
         selector: 'grouplist'
     },{
+            ref: 'groupEdit',
+            selector: 'groupedit'
+    },{
         ref: 'appList',
         selector: 'applist'
     }],
 
-    views: ['group.List'],
+    views: ['group.List', 'group.Edit'],
     stores: ['Apps','Groups'],
 
     init: function() {
@@ -30,6 +33,9 @@
     onAppSelect: function(app) {
         console.log('Load groups for app id ' + app.get('id'));
 
+        this.getGroupEdit().getForm().reset();
+        Ext.getCmp('group-button-upd').setDisabled(true);
+
         this.getGroupList().getSelectionModel().deselectAll();
         Ext.getCmp('group-button-del').setDisabled(true);
 
@@ -45,12 +51,18 @@
 
     onGroupSelect: function(selModel, selection) {
         // Enable elements after selection
-        Ext.getCmp('group-button-del').setDisabled(false);
+        if(selection[0] != null)
+        {
+            console.log('Group selected: ' + selection[0].get('id'));
+            Ext.getCmp('group-button-del').setDisabled(false);
+            this.application.fireEvent('groupselected', selection[0]);
+            this.getGroupEdit().loadRecord(selection[0]);
+            Ext.getCmp('group-button-upd').setDisabled(false);
+        }
     },
 
     onGroupsLoad: function(groups, request) {
         var store = this.getGroupsStore();
-
         store.clearFilter();
         store.sort('name', 'ASC');
     }

@@ -1,20 +1,21 @@
-Ext.define('Targeting.view.app.Edit', {
+Ext.define('Targeting.view.ado.Edit', {
     extend: 'Ext.form.Panel',
-    alias: 'widget.appedit',
+    alias: 'widget.adoedit',
 
-    store: 'Apps',
+    store: 'Ados',
 
     autoShow: true,
 
     tbar: [
         {
-            id: 'app-button-upd',
+            id: 'ado-button-upd',
             text: 'Сохранить',
             iconCls: 'button-upd',
             action: 'save',
             handler: function() {
                 return;
-            }
+            },
+            disabled: true
         }
     ],
 
@@ -27,8 +28,8 @@ Ext.define('Targeting.view.app.Edit', {
             },
             {
                 xtype: 'textfield',
-                name : 'appid',
-                fieldLabel: 'ИД приложения'
+                name : 'uuid',
+                fieldLabel: 'UUID'
             }
         ];
 
