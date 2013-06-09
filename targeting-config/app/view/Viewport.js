@@ -11,6 +11,7 @@ Ext.define('Targeting.view.Viewport', {
     
     initComponent: function() {
         var groupTab = Ext.create('Ext.panel.Panel', {
+            id: 'group-tab-panel',
             title: 'Группы',
             width: '100%',
             height: '100%',
@@ -21,26 +22,8 @@ Ext.define('Targeting.view.Viewport', {
                     width: '100%',
                     region: 'center',
                     layout: 'fit',
-                    margins: '5 5 0 0',
-                    tbar: [
-                        {
-                            text: 'Добавить',
-                            iconCls: 'button-add',
-                            handler: function(el) {
-                                return;
-                            },
-                            disabled: true
-                        },
-                        {
-                            text: 'Удалить',
-                            iconCls: 'button-del',
-                            handler: function() {
-                                return;
-                            },
-                            disabled: true
-                        }
-                    ]
-                    },{
+                    margins: '5 5 0 0'
+                },{
                     xtype: 'panel',
                     height: '50%',
                     width: '100%',
@@ -48,9 +31,11 @@ Ext.define('Targeting.view.Viewport', {
                     layout: 'fit',
                     split: true,
                     margins: '0 5 5 5'
-                }]
+                }],
+            disabled: true
         });
         var adoTab = Ext.create('Ext.panel.Panel', {
+            id: 'ado-tab-panel',
             title: 'Объекты',
             width: '100%',
             height: '100%',
@@ -70,7 +55,8 @@ Ext.define('Targeting.view.Viewport', {
                 layout: 'fit',
                 split: true,
                 margins: '0 5 5 5'
-            }]
+            }],
+            disabled: true
         });
         var propertyTabs = Ext.create('Ext.tab.Panel', {
             height: '100%',
@@ -93,31 +79,12 @@ Ext.define('Targeting.view.Viewport', {
             layout: 'border',
             items: [{
                     xtype: 'applist',
-                    title: 'Список приложений',
                     height: '100%',
                     width: 200,         
                     region: 'west',
                     margins: '5 0 0 5',
                     collapsible: true,          
-                    layout: 'fit',
-                    tbar: [
-                        {
-                            text: 'Добавить',
-                            iconCls: 'button-add',
-                            handler: function(el) {
-                                return;
-                            },
-                            disabled: true
-                        },
-                        {
-                            text: 'Удалить',
-                            iconCls: 'button-del',
-                            handler: function() {
-                                return;
-                            },
-                            disabled: true
-                        }
-                    ]
+                    layout: 'fit'
                 },
                 propertyTabs
             ]

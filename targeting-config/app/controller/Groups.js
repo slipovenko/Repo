@@ -14,6 +14,12 @@
 
     init: function() {
 
+        this.control({
+            'grouplist': {
+                selectionchange: this.onGroupSelect
+            }
+        });
+
         // Listen for an application wide event
         this.application.on({
             appselected: this.onAppSelect,
@@ -23,8 +29,11 @@
 
     onAppSelect: function(app) {
         console.log('Load groups for app id ' + app.get('id'));
-        var store = this.getGroupsStore();
 
+        this.getGroupList().getSelectionModel().deselectAll();
+        Ext.getCmp('group-button-del').setDisabled(true);
+
+        var store = this.getGroupsStore();
         store.load({
             callback: this.onGroupsLoad,
             params: {
@@ -32,18 +41,17 @@
             },            
             scope: this
         });
-        //var adoList = this.getAdoList();
-        //appEdit.loadRecord(selection[0]);
+    },
+
+    onGroupSelect: function(selModel, selection) {
+        // Enable elements after selection
+        Ext.getCmp('group-button-del').setDisabled(false);
     },
 
     onGroupsLoad: function(groups, request) {
         var store = this.getGroupsStore();
 
-        // The data should already be filtered on the serverside but since we
-        // are loading static data we need to do this after we loaded all the data
         store.clearFilter();
-        //store.filter('appid', request.params.appid);
         store.sort('name', 'ASC');
-        //this.getAdoList().update(ados);
-    },
+    }
 });

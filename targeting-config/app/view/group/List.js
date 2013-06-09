@@ -4,6 +4,26 @@ Ext.define('Targeting.view.group.List' ,{
 
     store: 'Groups',
 
+    tbar: [
+        {
+            id: 'group-button-add',
+            text: 'Добавить',
+            iconCls: 'button-add',
+            handler: function(el) {
+                return;
+            }
+        },
+        {
+            id: 'group-button-del',
+            text: 'Удалить',
+            iconCls: 'button-del',
+            handler: function() {
+                return;
+            },
+            disabled: true
+        }
+    ],
+
     initComponent: function() {
         this.columns = [
             {header: 'Имя', dataIndex: 'name',  flex: 1},
