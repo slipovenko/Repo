@@ -61,11 +61,14 @@ sub out
 		return $header.'Unsupported type: $dtype';
 	}
 
+    $self->{_action} = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
 	switch($obj)
 	{
 		case 'app' {$out = $self->out_app();}
 		case 'ado' {$out = $self->out_ado();}
 		case 'group' {$out = $self->out_group();}
+		case 'dict.attr' {$out = $self->out_attr();}
+		case 'dict.attrvalue' {$out = $self->out_attrvalue();}
 		case 'dict.priority' {$out = $self->out_priority();}
 		case 'dict.type' {$out = $self->out_type();}
 	}
@@ -76,13 +79,10 @@ sub out_app
 {
 	my($self) = @_;
 	my %odata;
-	my $header;
-	
-	my $action = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
 	my $dbh = $self->{_db};
 	my $idata = \%{$self->{_idata}};
 
-	switch($action) 
+	switch($self->{_action})
 	{
 		case 'create'
 			{
@@ -128,16 +128,11 @@ sub out_app
 sub out_ado
 {
 	my($self) = @_;
-	my %idata;
 	my %odata;
-	my $header;
-	
-	my $action = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
-	my $dtype = defined($self->{_cgi}->url_param('dtype')) ? $self->{_cgi}->url_param('dtype') : 'json';
-	my $dbh = $self->{_db};	
+	my $dbh = $self->{_db};
 	my $idata = \%{$self->{_idata}};
 
-	switch($action) 
+	switch($self->{_action})
 	{
 		case 'create'
 			{
@@ -182,16 +177,11 @@ sub out_ado
 sub out_group
 {
 	my($self) = @_;
-	my %idata;
 	my %odata;
-	my $header;
-	
-	my $action = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
-	my $dtype = defined($self->{_cgi}->url_param('dtype')) ? $self->{_cgi}->url_param('dtype') : 'json';
-	my $dbh = $self->{_db};	
+	my $dbh = $self->{_db};
 	my $idata = \%{$self->{_idata}};
 
-	switch($action) 
+	switch($self->{_action})
 	{
 		case 'create'
 			{
@@ -233,19 +223,65 @@ sub out_group
 	return JSON::XS->new->encode(\%odata);
 }
 
+sub out_attr
+{
+	my($self) = @_;
+	my %odata;
+	my $dbh = $self->{_db};
+
+	switch($self->{_action})
+	{
+		case 'read'
+			{
+				my $sql = "SELECT id, tag, name FROM dict.attr WHERE deleted != true ORDER BY 1 ASC";
+				my $sth = $dbh->prepare($sql);
+				$sth->execute();
+				while(my $group = $sth->fetchrow_hashref())
+				{
+					push @{$odata{results}}, $group;
+				}
+				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = "true"; }
+				my $rv = $sth->finish();
+			}
+	}
+
+	return JSON::XS->new->encode(\%odata);
+}
+
+sub out_attrvalue
+{
+	my($self) = @_;
+	my %odata;
+	my $dbh = $self->{_db};
+
+	switch($self->{_action})
+	{
+		case 'read'
+			{
+				my $sql = "SELECT id, value, name FROM dict.attr_value WHERE aid = ? AND deleted != true ORDER BY 1 ASC";
+				my $sth = $dbh->prepare($sql);
+				$sth->execute($self->{_cgi}->url_param('attrid'));
+				while(my $group = $sth->fetchrow_hashref())
+				{
+					push @{$odata{results}}, $group;
+				}
+				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = "true"; }
+				my $rv = $sth->finish();
+			}
+	}
+
+	return JSON::XS->new->encode(\%odata);
+}
+
 sub out_priority
 {
 	my($self) = @_;
-	my %idata;
 	my %odata;
-	my $header;
-
-	my $action = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
-	my $dtype = defined($self->{_cgi}->url_param('dtype')) ? $self->{_cgi}->url_param('dtype') : 'json';
 	my $dbh = $self->{_db};
-	my $idata = \%{$self->{_idata}};
 
-	switch($action)
+	switch($self->{_action})
 	{
 		case 'read'
 			{
@@ -268,16 +304,10 @@ sub out_priority
 sub out_type
 {
 	my($self) = @_;
-	my %idata;
 	my %odata;
-	my $header;
-
-	my $action = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
-	my $dtype = defined($self->{_cgi}->url_param('dtype')) ? $self->{_cgi}->url_param('dtype') : 'json';
 	my $dbh = $self->{_db};
-	my $idata = \%{$self->{_idata}};
 
-	switch($action)
+	switch($self->{_action})
 	{
 		case 'read'
 			{
