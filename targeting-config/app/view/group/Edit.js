@@ -28,8 +28,23 @@ Ext.define('Targeting.view.group.Edit', {
             },
             {
                 xtype: 'textfield',
-                name : 'weight',
+                name : 'priorityid',
+                fieldLabel: 'Приоритет'
+            },
+            {
+                xtype: 'textfield',
+                name : 'priorityid',
                 fieldLabel: 'Вес'
+            },
+            {
+                xtype: 'checkbox',
+                name : 'enable',
+                fieldLabel: 'Активна'
+            },
+            {
+                xtype: 'textfield',
+                name : 'attr',
+                fieldLabel: 'Таргетинг'
             }
         ];
 

@@ -185,12 +185,12 @@ sub out_group
 	{
 		case 'create'
 			{
-				my $sql = "INSERT INTO obj.group(name,weight,priorityid) VALUES (?, ?, ?)";
+				my $sql = "INSERT INTO obj.group(name,attr,weight,priorityid,enable) VALUES (?, ?, ?, ?, ?)";
 				$odata{success} = "true";
 			}
 		case 'read'
 			{
-				my $sql = "SELECT id, name, weight, priorityid FROM obj.group WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
+				my $sql = "SELECT id,name,attr,weight,priorityid,enable FROM obj.group WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
 				my $sth = $dbh->prepare($sql);
 				$sth->execute($self->{_cgi}->url_param('appid'));
 				while(my $group = $sth->fetchrow_hashref())

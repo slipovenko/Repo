@@ -542,7 +542,7 @@
             VALUES
             (1, 1001, 'Объявления ВКонтакте', false),
             (2, 1002, 'Для старых партнеров', true),
-            (3, 1003, 'Московской Комсомолец', false);
+            (3, 1003, 'Московский Комсомолец', false);
             SELECT setval('obj.app_id_seq', 3);
 
             INSERT INTO obj.ado
@@ -561,7 +561,7 @@
             (1, 1001, 'Группа 001', NULL, 1000, 1, true, false),
             (2, 1002, 'Группа 002', NULL, 1000, 2, true, true),
             (3, 1003, 'Группа 003', '', 100, 3, true, false),
-            (4, 1003, 'Группа 004', 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 2, true, false);
+            (4, 1003, 'Группа 004', 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 2, false, false);
             SELECT setval('obj.group_id_seq', 4);
 
             INSERT INTO obj.ado2group

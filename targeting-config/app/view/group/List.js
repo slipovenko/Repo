@@ -27,10 +27,13 @@ Ext.define('Targeting.view.group.List', {
     initComponent: function() {
         this.columns = [
             {header: 'Имя', dataIndex: 'name',  flex: 1},
-            {header: 'Вес', dataIndex: 'weight',  flex: 1},
             {header: 'Приоритет', dataIndex: 'priorityid',  flex: 1, renderer: function(value) {
                 return Ext.getStore('dict.Priorities').getById(value).get('name');
-            }}
+            }},
+            {header: 'Состояние', dataIndex: 'enable',  flex: 1, renderer: function(value) {
+                return value?'Активна':'Неактивна';
+            }},
+            {header: 'Вес', dataIndex: 'weight',  flex: 1},
         ];
 
         this.callParent(arguments);
