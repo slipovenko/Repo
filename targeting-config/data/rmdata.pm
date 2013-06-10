@@ -66,6 +66,8 @@ sub out
 		case 'app' {$out = $self->out_app();}
 		case 'ado' {$out = $self->out_ado();}
 		case 'group' {$out = $self->out_group();}
+		case 'dict.priority' {$out = $self->out_priority();}
+		case 'dict.type' {$out = $self->out_type();}
 	}
 	return $header.$out;
 }
@@ -225,6 +227,70 @@ sub out_group
 			{
 				my $sql = "UPDATE obj.group SET deleted = true WHERE id = ?";
 				$odata{success} = "true";
+			}
+	}
+
+	return JSON::XS->new->encode(\%odata);
+}
+
+sub out_priority
+{
+	my($self) = @_;
+	my %idata;
+	my %odata;
+	my $header;
+
+	my $action = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
+	my $dtype = defined($self->{_cgi}->url_param('dtype')) ? $self->{_cgi}->url_param('dtype') : 'json';
+	my $dbh = $self->{_db};
+	my $idata = \%{$self->{_idata}};
+
+	switch($action)
+	{
+		case 'read'
+			{
+				my $sql = "SELECT id, value, name FROM dict.priority WHERE deleted != true ORDER BY 1 ASC";
+				my $sth = $dbh->prepare($sql);
+				$sth->execute();
+				while(my $group = $sth->fetchrow_hashref())
+				{
+					push @{$odata{results}}, $group;
+				}
+				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = "true"; }
+				my $rv = $sth->finish();
+			}
+	}
+
+	return JSON::XS->new->encode(\%odata);
+}
+
+sub out_type
+{
+	my($self) = @_;
+	my %idata;
+	my %odata;
+	my $header;
+
+	my $action = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
+	my $dtype = defined($self->{_cgi}->url_param('dtype')) ? $self->{_cgi}->url_param('dtype') : 'json';
+	my $dbh = $self->{_db};
+	my $idata = \%{$self->{_idata}};
+
+	switch($action)
+	{
+		case 'read'
+			{
+				my $sql = "SELECT id, mtype, name FROM dict.type WHERE deleted != true ORDER BY 1 ASC";
+				my $sth = $dbh->prepare($sql);
+				$sth->execute();
+				while(my $group = $sth->fetchrow_hashref())
+				{
+					push @{$odata{results}}, $group;
+				}
+				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = "true"; }
+				my $rv = $sth->finish();
 			}
 	}
 

@@ -1,4 +1,4 @@
-Ext.define('Targeting.view.group.List' ,{
+Ext.define('Targeting.view.group.List', {
     extend: 'Ext.grid.Panel',
     alias: 'widget.grouplist',
 
@@ -28,7 +28,9 @@ Ext.define('Targeting.view.group.List' ,{
         this.columns = [
             {header: 'Имя', dataIndex: 'name',  flex: 1},
             {header: 'Вес', dataIndex: 'weight',  flex: 1},
-            {header: 'Приоритет', dataIndex: 'priorityid',  flex: 1}
+            {header: 'Приоритет', dataIndex: 'priorityid',  flex: 1, renderer: function(value) {
+                return Ext.getStore('dict.Priorities').getById(value).get('name');
+            }}
         ];
 
         this.callParent(arguments);

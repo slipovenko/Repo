@@ -12,7 +12,7 @@ Ext.application({
 
     autoCreateViewport: true,
     
-    models: ['App', 'Ado', 'Group'],
-    stores: ['Apps', 'Ados', 'Groups'],
+    models: ['App', 'Ado', 'Group', 'dict.Priority', 'dict.Type'],
+    stores: ['Apps', 'Ados', 'Groups', 'dict.Priorities', 'dict.Types'],
     controllers: ['Apps', 'Ados', 'Groups']
 });

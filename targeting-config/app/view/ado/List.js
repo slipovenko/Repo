@@ -1,4 +1,4 @@
-Ext.define('Targeting.view.ado.List' ,{
+Ext.define('Targeting.view.ado.List', {
     extend: 'Ext.grid.Panel',
     alias: 'widget.adolist',
 

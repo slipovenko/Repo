@@ -1,4 +1,4 @@
-Ext.define('Targeting.view.app.List' ,{
+Ext.define('Targeting.view.app.List', {
     extend: 'Ext.grid.Panel',
     alias: 'widget.applist',
 
