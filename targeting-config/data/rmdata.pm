@@ -136,12 +136,12 @@ sub out_ado
 	{
 		case 'create'
 			{
-				my $sql = "INSERT INTO obj.ado(name,uuid) VALUES (?, ?)";
+				my $sql = "INSERT INTO obj.ado(appid,uuid,flink,ilink,tid,name,attr) VALUES (?, ?, ?, ?, ?, ?, ?)";
 				$odata{success} = "true";
 			}
 		case 'read'
 			{
-				my $sql = "SELECT id,uuid,name FROM obj.ado WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
+				my $sql = "SELECT id,uuid,flink,ilink,tid,name,attr FROM obj.ado WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
 				my $sth = $dbh->prepare($sql);
 				$sth->execute($self->{_cgi}->url_param('appid'));
 				while(my $ado = $sth->fetchrow_hashref())

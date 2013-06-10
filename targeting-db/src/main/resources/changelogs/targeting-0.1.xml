@@ -551,8 +551,8 @@
             (1, 1001, 'd2fbf3e5-3cc0-4def-a512-0b87e69138c8', 'http://test.ru/0001.swf', 'http://test.ru/0001.jpg', 3, 'Баннер 001', NULL, false),
             (2, 1001, '6ee9ccc4-2cb6-45fd-b4ae-c7a09f8faee1', 'http://test.ru/0002.swf', 'http://test.ru/0002.jpg', 3, 'Баннер 002', NULL, true),
             (3, 1002, '84de256f-ba57-4c6f-ae6d-d9901bb302f6', 'http://test.ru/0003.swf', 'http://test.ru/0003.jpg', 3, 'Баннер 003', NULL, true),
-            (4, 1003, '881aef88-b809-419a-864f-0d6ef69a1581', 'http://test.ru/0004.swf', 'http://test.ru/0004.jpg', 3, 'Баннер 004', NULL, false),
-            (5, 1003, '0f04b4c5-d6d4-4291-9f8f-c8224783cb80', 'http://test.ru/0005.swf', 'http://test.ru/0005.jpg', 3, 'Баннер 005', NULL, false);
+            (4, 1003, '881aef88-b809-419a-864f-0d6ef69a1581', 'http://test.ru/0004.swf', 'http://test.ru/0004.jpg', 2, 'Баннер 004', NULL, false),
+            (5, 1003, '0f04b4c5-d6d4-4291-9f8f-c8224783cb80', 'http://test.ru/0005.swf', 'http://test.ru/0005.jpg', 1, 'Баннер 005', NULL, false);
             SELECT setval('obj.ado_id_seq', 5);
 
             INSERT INTO obj."group"

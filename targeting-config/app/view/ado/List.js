@@ -7,6 +7,9 @@ Ext.define('Targeting.view.ado.List', {
     initComponent: function() {
         this.columns = [
             {header: 'Имя', dataIndex: 'name',  flex: 1},
+            {header: 'Тип', dataIndex: 'tid',  flex: 1, renderer: function(value) {
+                return Ext.getStore('dict.Types').getById(value).get('name');
+            }},
             {header: 'UUID', dataIndex: 'uuid',  flex: 1}
         ];
 

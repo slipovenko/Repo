@@ -28,8 +28,28 @@ Ext.define('Targeting.view.ado.Edit', {
             },
             {
                 xtype: 'textfield',
+                name : 'tid',
+                fieldLabel: 'Тип'
+            },
+            {
+                xtype: 'textfield',
                 name : 'uuid',
                 fieldLabel: 'UUID'
+            },
+            {
+                xtype: 'textfield',
+                name : 'flink',
+                fieldLabel: 'Файл'
+            },
+            {
+                xtype: 'textfield',
+                name : 'ilink',
+                fieldLabel: 'Ссылка'
+            },
+            {
+                xtype: 'textfield',
+                name : 'attr',
+                fieldLabel: 'Таргетинг'
             }
         ];
 
