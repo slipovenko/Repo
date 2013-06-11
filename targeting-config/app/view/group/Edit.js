@@ -27,13 +27,19 @@ Ext.define('Targeting.view.group.Edit', {
                 fieldLabel: 'Имя'
             },
             {
-                xtype: 'textfield',
+                xtype: 'combo',
+                store: Ext.getStore('dict.Priorities'),
+                valueField: 'id',
+                displayField: 'name',
+                editable: false,
+                forceSelection: true,
                 name : 'priorityid',
+                value: 'priorityid',
                 fieldLabel: 'Приоритет'
             },
             {
                 xtype: 'textfield',
-                name : 'priorityid',
+                name : 'weight',
                 fieldLabel: 'Вес'
             },
             {

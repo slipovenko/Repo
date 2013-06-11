@@ -27,8 +27,14 @@ Ext.define('Targeting.view.ado.Edit', {
                 fieldLabel: 'Имя'
             },
             {
-                xtype: 'textfield',
+                xtype: 'combo',
+                store: Ext.getStore('dict.Types'),
+                valueField: 'id',
+                displayField: 'name',
+                editable: false,
+                forceSelection: true,
                 name : 'tid',
+                value: 'tid',
                 fieldLabel: 'Тип'
             },
             {
