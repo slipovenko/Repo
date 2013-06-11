@@ -31,7 +31,7 @@ Ext.define('Targeting.view.group.List', {
                 return Ext.getStore('dict.Priorities').getById(value).get('name');
             }},
             {header: 'Состояние', dataIndex: 'enable',  flex: 1, renderer: function(value) {
-                return value?'Активна':'Неактивна';
+                return value=='1'?'Активна':'Неактивна';
             }},
             {header: 'Вес', dataIndex: 'weight',  flex: 1},
         ];

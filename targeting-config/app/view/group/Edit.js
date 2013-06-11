@@ -12,9 +12,6 @@ Ext.define('Targeting.view.group.Edit', {
             text: 'Сохранить',
             iconCls: 'button-upd',
             action: 'save',
-            handler: function() {
-                return;
-            },
             disabled: true
         }
     ],
@@ -44,7 +41,10 @@ Ext.define('Targeting.view.group.Edit', {
             },
             {
                 xtype: 'checkbox',
+                uncheckedValue: '0',
+                inputValue: '1',
                 name : 'enable',
+                value : 'enable',
                 fieldLabel: 'Активна'
             },
             {

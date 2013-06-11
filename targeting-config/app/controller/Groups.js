@@ -20,6 +20,9 @@
         this.control({
             'grouplist': {
                 selectionchange: this.onGroupSelect
+            },
+            'groupedit button[action=save]': {
+                click: this.onGroupUpdate
             }
         });
 
@@ -65,5 +68,15 @@
         var store = this.getGroupsStore();
         store.clearFilter();
         store.sort('name', 'ASC');
+    },
+
+    onGroupUpdate: function(button, aEvent, aOptions) {
+        var form = button.up('form'),
+            record = form.getRecord(),
+            values = form.getValues();
+
+        record.set(values);
+        this.getGroupsStore().sync();
+        console.log('Saved object: ' + record.get('name'));
     }
 });

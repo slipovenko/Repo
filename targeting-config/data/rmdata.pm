@@ -154,11 +154,11 @@ sub out_ado
 			}
 		case 'update'
 			{
-				my $sql = "UPDATE obj.ado SET name = ? WHERE id = ? AND deleted != true";
+				my $sql = "UPDATE obj.ado SET name = ?, tid = ? WHERE id = ? AND deleted != true";
 				if($idata->{id} =~ /\d+/)
 				{						
 					my $sth = $dbh->prepare($sql);
-					$sth->execute($idata->{name}, $idata->{id});
+					$sth->execute($idata->{name}, $idata->{tid}, $idata->{id});
 					if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
 					else { $odata{success} = "true"; }
 					my $rv = $sth->finish();
@@ -203,11 +203,11 @@ sub out_group
 			}
 		case 'update'
 			{
-				my $sql = "UPDATE obj.group SET name = ?, weight = ?, priorityid = ? WHERE id = ? AND deleted != true";
+				my $sql = "UPDATE obj.group SET name = ?, weight = ?, priorityid = ?, enable = ? WHERE id = ? AND deleted != true";
 				if($idata->{id} =~ /\d+/)
 				{						
 					my $sth = $dbh->prepare($sql);
-					$sth->execute($idata->{name}, $idata->{weight}, $idata->{priorityid}, $idata->{id});
+					$sth->execute($idata->{name}, $idata->{weight}, $idata->{priorityid}, $idata->{enable}, $idata->{id});
 					if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
 					else { $odata{success} = "true"; }
 					my $rv = $sth->finish();

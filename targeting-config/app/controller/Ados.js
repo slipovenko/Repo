@@ -20,6 +20,9 @@
         this.control({
             'adolist': {
                 selectionchange: this.onAdoSelect
+            },
+            'adoedit button[action=save]': {
+                click: this.onAdoUpdate
             }
         });
 
@@ -63,5 +66,15 @@
         var store = this.getAdosStore();
         store.clearFilter();
         store.sort('name', 'ASC');
+    },
+
+    onAdoUpdate: function(button, aEvent, aOptions) {
+        var form = button.up('form'),
+            record = form.getRecord(),
+            values = form.getValues();
+
+        record.set(values);
+        this.getAdosStore().sync();
+        console.log('Saved object: ' + record.get('name'));
     }
 });

@@ -12,9 +12,6 @@ Ext.define('Targeting.view.ado.Edit', {
             text: 'Сохранить',
             iconCls: 'button-upd',
             action: 'save',
-            handler: function() {
-                return;
-            },
             disabled: true
         }
     ],
