@@ -38,6 +38,7 @@
 
         this.getAdoEdit().getForm().reset();
         Ext.getCmp('ado-button-upd').setDisabled(true);
+        Ext.getCmp('ado-form-edit').setDisabled(true);
 
         this.getAdoList().getSelectionModel().deselectAll();
 
@@ -59,6 +60,7 @@
             this.application.fireEvent('adoselected', selection[0]);
             this.getAdoEdit().loadRecord(selection[0]);
             Ext.getCmp('ado-button-upd').setDisabled(false);
+            Ext.getCmp('ado-form-edit').setDisabled(false);
         }
     },
 

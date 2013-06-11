@@ -50,7 +50,8 @@ Ext.define('Targeting.view.group.Edit', {
             {
                 xtype: 'textfield',
                 name : 'attr',
-                fieldLabel: 'Таргетинг'
+                fieldLabel: 'Таргетинг',
+                readOnly: true
             }
         ];
 

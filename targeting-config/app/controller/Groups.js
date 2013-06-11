@@ -38,6 +38,7 @@
 
         this.getGroupEdit().getForm().reset();
         Ext.getCmp('group-button-upd').setDisabled(true);
+        Ext.getCmp('group-form-edit').setDisabled(true);
 
         this.getGroupList().getSelectionModel().deselectAll();
         Ext.getCmp('group-button-del').setDisabled(true);
@@ -61,6 +62,7 @@
             this.application.fireEvent('groupselected', selection[0]);
             this.getGroupEdit().loadRecord(selection[0]);
             Ext.getCmp('group-button-upd').setDisabled(false);
+            Ext.getCmp('group-form-edit').setDisabled(false);
         }
     },
 

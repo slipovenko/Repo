@@ -43,6 +43,7 @@ Ext.define('Targeting.controller.Apps', {
         this.getAppEdit().loadRecord(selection[0]);
         // Enable elements after selection
         Ext.getCmp('app-button-del').setDisabled(false);
+        Ext.getCmp('app-form-edit').setDisabled(false);
         Ext.getCmp('group-tab-panel').setDisabled(false);
         Ext.getCmp('ado-tab-panel').setDisabled(false);
     },

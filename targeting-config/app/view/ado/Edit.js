@@ -37,22 +37,26 @@ Ext.define('Targeting.view.ado.Edit', {
             {
                 xtype: 'textfield',
                 name : 'uuid',
-                fieldLabel: 'UUID'
+                fieldLabel: 'UUID',
+                readOnly: true
             },
             {
                 xtype: 'textfield',
                 name : 'flink',
-                fieldLabel: 'Файл'
+                fieldLabel: 'Файл',
+                readOnly: true
             },
             {
                 xtype: 'textfield',
                 name : 'ilink',
-                fieldLabel: 'Ссылка'
+                fieldLabel: 'Ссылка',
+                readOnly: true
             },
             {
                 xtype: 'textfield',
                 name : 'attr',
-                fieldLabel: 'Таргетинг'
+                fieldLabel: 'Таргетинг',
+                readOnly: true
             }
         ];
 

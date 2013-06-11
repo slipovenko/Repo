@@ -24,7 +24,9 @@ Ext.define('Targeting.view.Viewport', {
                     layout: 'fit',
                     margins: '5 5 0 0'
                 },{
+                    id: 'group-form-edit',
                     xtype: 'groupedit',
+                    disabled: true,
                     height: '50%',
                     width: '100%',
                     region: 'south',
@@ -47,7 +49,9 @@ Ext.define('Targeting.view.Viewport', {
                 layout: 'fit',
                 margins: '5 5 0 0'
             },{
+                id: 'ado-form-edit',
                 xtype: 'adoedit',
+                disabled: true,
                 height: '50%',
                 width: '100%',
                 region: 'south',
@@ -63,7 +67,9 @@ Ext.define('Targeting.view.Viewport', {
             margins: '5 5 0 0',
             items: [
                 {
+                    id: 'app-form-edit',
                     xtype: 'appedit',
+                    disabled: true,
                     title: 'Информация'
                 },
                 groupTab,
