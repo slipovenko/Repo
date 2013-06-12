@@ -12,17 +12,13 @@ Ext.define('Targeting.view.app.List', {
             id: 'app-button-add',
             text: 'Добавить',
             iconCls: 'button-add',
-            handler: function(el) {
-                return;
-            }
+            action: 'new'
         },
         {
             id: 'app-button-del',
             text: 'Удалить',
             iconCls: 'button-del',
-            handler: function() {
-                return;
-            },
+            action: 'delete',
             disabled: true
         }
     ],

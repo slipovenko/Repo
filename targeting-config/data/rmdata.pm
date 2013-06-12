@@ -50,7 +50,7 @@ sub out
 	{
 		$header = "Content-type: application/json\n\n";
 		my $pdata = $self->{_cgi}->param( 'POSTDATA' );
-		if($pdata =~ /^\s*\{.*\}\s*$/)
+		if($pdata =~ /^\s*((\{.*\})|(\[.*\]))\s*$/)
 		{
 			$self->{_idata} = decode_json($pdata);
 		}
@@ -79,15 +79,38 @@ sub out_app
 {
 	my($self) = @_;
 	my %odata;
+	my @idata;
 	my $dbh = $self->{_db};
-	my $idata = \%{$self->{_idata}};
 
 	switch($self->{_action})
 	{
 		case 'create'
 			{
-				my $sql = "INSERT INTO obj.app(appid,name) VALUES (?, ?)";
-				$odata{success} = "true";
+				my $sql = "INSERT INTO obj.app(appid,name) VALUES (?, ?) RETURNING id,appid,name";
+				my $errcnt = 0;
+
+                if(ref $self->{_idata} eq 'HASH') { push( @idata, \%{$self->{_idata}} ); }
+                else { @idata = @{$self->{_idata}}; }
+
+				$dbh->begin_work();
+				foreach my $r (@idata)
+				{
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($r->{appid}, $r->{name});
+                    if ( $sth->err )
+                    {
+                        my %rep = ('appid' => $r->{appid}, 'name' => $r->{name}, 'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        push @{$odata{results}}, \%rep;
+                        $errcnt++;
+                    }
+                    else
+                    {
+                        push @{$odata{results}}, $sth->fetchrow_hashref();
+                    }
+                    my $rv = $sth->finish();
+                }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = "true"; }
 			}
 		case 'read'
 			{
@@ -105,15 +128,26 @@ sub out_app
 		case 'update'
 			{
 				my $sql = "UPDATE obj.app SET appid = ?, name = ? WHERE id = ? AND deleted != true";
-				my $data = $self->{_cgi}->param( 'POSTDATA');
-				if($idata->{id} =~ /\d+/)
-				{						
-					my $sth = $dbh->prepare($sql);
-					$sth->execute($idata->{appid}, $idata->{name}, $idata->{id});
-					if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-					else { $odata{success} = "true"; }
-					my $rv = $sth->finish();
-				}
+				my $errcnt = 0;
+
+                if(ref $self->{_idata} eq 'HASH') { push( @idata, \%{$self->{_idata}} ); }
+                else { @idata = @{$self->{_idata}}; }
+
+				$dbh->begin_work();
+				foreach my $r (@idata)
+				{
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($r->{appid}, $r->{name}, $r->{id});
+                    if ( $sth->err )
+                    {
+                        my %rep = ('id' => $r->{id}, 'appid' => $r->{appid}, 'name' => $r->{name}, 'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        push @{$odata{results}}, \%rep;
+                        $errcnt++;
+                    }
+                    my $rv = $sth->finish();
+                }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = "true"; }
 			}
 		case 'delete'
 			{

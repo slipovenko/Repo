@@ -1,5 +1,6 @@
 Ext.define('Targeting.controller.Apps', {
     extend: 'Ext.app.Controller',
+    models: ['App'],
     stores: ['Apps'],
     
     refs: [{
@@ -17,6 +18,12 @@ Ext.define('Targeting.controller.Apps', {
             'applist': {
                 render: this.onAppListRendered,
                 selectionchange: this.onAppSelect
+            },
+            'applist button[action=new]': {
+                click: this.onAppCreate
+            },
+            'applist button[action=delete]': {
+                click: this.onAppDelete
             },
             'appedit button[action=save]': {
                 click: this.onAppUpdate
@@ -46,6 +53,27 @@ Ext.define('Targeting.controller.Apps', {
         Ext.getCmp('app-form-edit').setDisabled(false);
         Ext.getCmp('group-tab-panel').setDisabled(false);
         Ext.getCmp('ado-tab-panel').setDisabled(false);
+    },
+
+    onAppCreate: function(button, aEvent, aOptions) {
+        console.log('Create new app button');
+        var store = this.getAppsStore();
+        if(store.getNewRecords().length == 0)
+        {
+            var newApp = Ext.create('Targeting.model.App');
+            newApp.set('name', 'Новое приложение');
+            store.insert(0, newApp);
+            this.getAppList().getSelectionModel().select(0);
+        }
+        else
+        {
+            var newApp = store.getNewRecords()[0];
+            this.getAppList().getSelectionModel().select(store.indexOf(newApp));
+        }
+    },
+
+    onAppDelete: function(button, aEvent, aOptions) {
+        console.log('Delete app button');
     },
 
     onAppUpdate: function(button, aEvent, aOptions) {
