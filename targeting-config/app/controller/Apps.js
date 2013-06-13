@@ -45,15 +45,18 @@ Ext.define('Targeting.controller.Apps', {
     },
 
     onAppSelect: function(selModel, selection) {
-        this.getAppEdit().loadRecord(selection[0]);
-        // Enable buttons after selection
-        Ext.getCmp('app-button-del').setDisabled(false);
-        Ext.getCmp('app-form-edit').setDisabled(false);
-        var tflag = typeof selection[0].get('id') == 'undefined';
-        Ext.getCmp('group-tab-panel').setDisabled(tflag);
-        Ext.getCmp('ado-tab-panel').setDisabled(tflag);
-        if(tflag){Ext.getCmp('app-form-edit').show();}
-        this.application.fireEvent('appselected', selection[0]);
+        if(selection[0] != null)
+        {
+            this.getAppEdit().loadRecord(selection[0]);
+            // Enable buttons after selection
+            Ext.getCmp('app-button-del').setDisabled(false);
+            Ext.getCmp('app-form-edit').setDisabled(false);
+            var tflag = typeof selection[0].get('id') == 'undefined';
+            Ext.getCmp('group-tab-panel').setDisabled(tflag);
+            Ext.getCmp('ado-tab-panel').setDisabled(tflag);
+            if(tflag){Ext.getCmp('app-form-edit').show();}
+            this.application.fireEvent('appselected', selection[0]);
+        }
     },
 
     onAppCreate: function(button, aEvent, aOptions) {
@@ -73,7 +76,20 @@ Ext.define('Targeting.controller.Apps', {
     },
 
     onAppDelete: function(button, aEvent, aOptions) {
-        console.log('Delete app button');
+        var store = this.getAppsStore();
+        var record = this.getAppList().getSelectionModel().getSelection()[0];
+        var pos = store.indexOf(record);
+        store.remove(record);
+        this.getAppList().getSelectionModel().select(pos>=store.count()-1?store.count()-1:pos);
+        store.sync({
+            success: function (b, o) {
+                console.log('Deleted app: ' + record.get('name'));
+            },
+            failure: function (b, o) {
+                console.log('ERROR deleting app: ' + record.get('name'));
+                store.insert(pos, record);
+            }
+        });
     },
 
     onAppUpdate: function(button, aEvent, aOptions) {

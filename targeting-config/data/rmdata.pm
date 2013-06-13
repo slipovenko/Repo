@@ -149,11 +149,31 @@ sub out_app
                 if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
                 else { $dbh->commit(); $odata{success} = "true"; }
 			}
-		case 'delete'
+		case 'destroy'
 			{
 				my $sql = "UPDATE obj.app SET deleted = true WHERE id = ?";
-				$odata{success} = "true";
+                my $errcnt = 0;
+
+                if(ref $self->{_idata} eq 'HASH') { push( @idata, \%{$self->{_idata}} ); }
+                else { @idata = @{$self->{_idata}}; }
+
+                $dbh->begin_work();
+                foreach my $r (@idata)
+                {
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($r->{id});
+                    if ( $sth->err )
+                    {
+                        my %rep = ('id' => $r->{id}, 'appid' => $r->{appid}, 'name' => $r->{name}, 'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        push @{$odata{results}}, \%rep;
+                        $errcnt++;
+                    }
+                    my $rv = $sth->finish();
+                }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = "true"; }
 			}
+		else { $odata{success} = "false"; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
