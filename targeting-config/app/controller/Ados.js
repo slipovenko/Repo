@@ -34,8 +34,6 @@
     },
 
     onAppSelect: function(app) {
-        console.log('Load ados for app id ' + app.get('id'));
-
         this.getAdoEdit().getForm().reset();
         Ext.getCmp('ado-button-upd').setDisabled(true);
         Ext.getCmp('ado-form-edit').setDisabled(true);
@@ -43,13 +41,17 @@
         this.getAdoList().getSelectionModel().deselectAll();
 
         var store = this.getAdosStore();
-        store.load({
-            callback: this.onAdosLoad,
-            params: {
-                appid: app.get('appid')
-            },            
-            scope: this
-        });
+        store.removeAll();
+        if(typeof app.get('id') != 'undefined')
+        {
+            store.load({
+                callback: this.onAdosLoad,
+                params: {
+                    appid: app.get('appid')
+                },
+                scope: this
+            });
+        }
     },
 
     onAdoSelect: function(selModel, selection) {

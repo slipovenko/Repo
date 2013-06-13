@@ -45,18 +45,18 @@ Ext.define('Targeting.controller.Apps', {
     },
 
     onAppSelect: function(selModel, selection) {
-        //console.log('Selected ' + selection[0].get('name'));
-        this.application.fireEvent('appselected', selection[0]);
         this.getAppEdit().loadRecord(selection[0]);
-        // Enable elements after selection
+        // Enable buttons after selection
         Ext.getCmp('app-button-del').setDisabled(false);
         Ext.getCmp('app-form-edit').setDisabled(false);
-        Ext.getCmp('group-tab-panel').setDisabled(false);
-        Ext.getCmp('ado-tab-panel').setDisabled(false);
+        var tflag = typeof selection[0].get('id') == 'undefined';
+        Ext.getCmp('group-tab-panel').setDisabled(tflag);
+        Ext.getCmp('ado-tab-panel').setDisabled(tflag);
+        if(tflag){Ext.getCmp('app-form-edit').show();}
+        this.application.fireEvent('appselected', selection[0]);
     },
 
     onAppCreate: function(button, aEvent, aOptions) {
-        console.log('Create new app button');
         var store = this.getAppsStore();
         if(store.getNewRecords().length == 0)
         {
@@ -82,7 +82,15 @@ Ext.define('Targeting.controller.Apps', {
         values = form.getValues();
 
         record.set(values);
-        this.getAppsStore().sync();
-        console.log('Saved: ' + record.get('appid'));
+        this.getAppsStore().sync({
+            success: function (b, o) {
+                console.log('Saved app: ' + record.get('name'));
+                Ext.getCmp('group-tab-panel').setDisabled(false);
+                Ext.getCmp('ado-tab-panel').setDisabled(false);
+            },
+            failure: function (b, o) {
+                console.log('ERROR saving app: ' + record.get('name'));
+            }
+        });
     }
 });

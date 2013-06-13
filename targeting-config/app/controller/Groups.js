@@ -34,8 +34,6 @@
     },
 
     onAppSelect: function(app) {
-        console.log('Load groups for app id ' + app.get('id'));
-
         this.getGroupEdit().getForm().reset();
         Ext.getCmp('group-button-upd').setDisabled(true);
         Ext.getCmp('group-form-edit').setDisabled(true);
@@ -44,13 +42,17 @@
         Ext.getCmp('group-button-del').setDisabled(true);
 
         var store = this.getGroupsStore();
-        store.load({
-            callback: this.onGroupsLoad,
-            params: {
-                appid: app.get('appid')
-            },            
-            scope: this
-        });
+        store.removeAll();
+        if(typeof app.get('id') != 'undefined')
+        {
+            store.load({
+                callback: this.onGroupsLoad,
+                params: {
+                    appid: app.get('appid')
+                },
+                scope: this
+            });
+        }
     },
 
     onGroupSelect: function(selModel, selection) {
