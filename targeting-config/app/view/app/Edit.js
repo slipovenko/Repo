@@ -5,30 +5,38 @@ Ext.define('Targeting.view.app.Edit', {
     store: 'Apps',
 
     autoShow: true,
+    trackResetOnLoad: true,
+    bodyPadding: 5,
 
     tbar: [
         {
             id: 'app-button-upd',
             text: 'Сохранить',
             iconCls: 'button-upd',
-            action: 'save',
-            handler: function() {
-                return;
-            }
+            action: 'save'
         }
     ],
 
     initComponent: function() {
         this.items = [
             {
-                xtype: 'textfield',
-                name : 'name',
-                fieldLabel: 'Имя'
+                xtype: 'numberfield',
+                name : 'appid',
+                fieldLabel: 'ИД приложения',
+                hideTrigger:true,
+                allowBlank: false,
+                blankText: 'ID приложения не должно быть пустым',
+                minValue: 1,
+                minText: 'Минимальное значение 1',
+                maxValue: 2147483647,
+                maxText: 'Максимальное значение 2147483647'
             },
             {
                 xtype: 'textfield',
-                name : 'appid',
-                fieldLabel: 'ИД приложения'
+                name : 'name',
+                fieldLabel: 'Имя',
+                allowBlank: false,
+                blankText: 'Имя приложения не должно быть пустым'
             }
         ];
 

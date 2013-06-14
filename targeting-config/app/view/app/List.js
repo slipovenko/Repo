@@ -25,7 +25,8 @@ Ext.define('Targeting.view.app.List', {
 
     initComponent: function() {
         this.columns = [
-            {dataIndex: 'name',  flex: 1}
+            {header: 'ID', dataIndex: 'appid',  flex: 1, maxWidth: 75},
+            {header: 'Имя', dataIndex: 'name',  flex: 1}
         ];
 
         this.callParent(arguments);

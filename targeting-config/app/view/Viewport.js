@@ -1,3 +1,7 @@
+// Fix bug with too small tooltip window
+// http://stackoverflow.com/questions/15834689/extjs-4-2-tooltips-not-wide-enough-to-see-contents
+delete Ext.tip.Tip.prototype.minWidth;
+
 Ext.define('Targeting.view.Viewport', {
     extend: 'Ext.container.Viewport',
     layout: 'fit',
@@ -70,7 +74,7 @@ Ext.define('Targeting.view.Viewport', {
                     id: 'app-form-edit',
                     xtype: 'appedit',
                     disabled: true,
-                    title: 'Информация'
+                    title: 'Приложение'
                 },
                 groupTab,
                 adoTab
@@ -84,7 +88,7 @@ Ext.define('Targeting.view.Viewport', {
             items: [{
                     xtype: 'applist',
                     height: '100%',
-                    width: 200,         
+                    width: 250,
                     region: 'west',
                     margins: '5 0 0 5',
                     collapsible: true,          
