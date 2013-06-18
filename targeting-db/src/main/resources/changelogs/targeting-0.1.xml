@@ -542,8 +542,9 @@
             VALUES
             (1, 1001, 'Объявления ВКонтакте', false),
             (2, 1002, 'Для старых партнеров', true),
-            (3, 1003, 'Московский Комсомолец', false);
-            SELECT setval('obj.app_id_seq', 3);
+            (3, 1003, 'Московский Комсомолец', false),
+            (4, 2147483647, 'Техника Молодежи', false);
+            SELECT setval('obj.app_id_seq', 4);
 
             INSERT INTO obj.ado
             (id, appid, uuid, flink, ilink, tid, name, attr, deleted)
@@ -552,8 +553,13 @@
             (2, 1001, '6ee9ccc4-2cb6-45fd-b4ae-c7a09f8faee1', 'http://test.ru/0002.swf', 'http://test.ru/0002.jpg', 3, 'Баннер 002', NULL, true),
             (3, 1002, '84de256f-ba57-4c6f-ae6d-d9901bb302f6', 'http://test.ru/0003.swf', 'http://test.ru/0003.jpg', 3, 'Баннер 003', NULL, true),
             (4, 1003, '881aef88-b809-419a-864f-0d6ef69a1581', 'http://test.ru/0004.swf', 'http://test.ru/0004.jpg', 2, 'Баннер 004', NULL, false),
-            (5, 1003, '0f04b4c5-d6d4-4291-9f8f-c8224783cb80', 'http://test.ru/0005.swf', 'http://test.ru/0005.jpg', 1, 'Баннер 005', NULL, false);
-            SELECT setval('obj.ado_id_seq', 5);
+            (5, 1003, '0f04b4c5-d6d4-4291-9f8f-c8224783cb80', 'http://test.ru/0005.swf', 'http://test.ru/0005.jpg', 1, 'Баннер 005', NULL, false),
+            (6, 2147483647, 'fd0a6740-d947-4d4d-99f6-ba9edf13f79a', 'http://test.ru/Lada.swf', 'http://test.ru/Lada.jpg', 2, 'Лада', NULL, false),
+            (7, 2147483647, '74d62fc3-4b87-4f11-862d-14a111af48b7', 'http://test.ru/Zhiguli.swf', 'http://test.ru/Zhiguli.jpg', 2, 'Жигули', NULL, false),
+            (8, 2147483647, 'fcac2d9b-0ada-4bb0-8bfa-e3db5bd791ce', 'http://test.ru/KAMAZ.swf', 'http://test.ru/KAMAZ.jpg', 1, 'КАМАЗ', NULL, false),
+            (9, 2147483647, '8268db28-4efc-4387-a3a6-414bf5e6badd', 'http://test.ru/B737.swf', 'http://test.ru/B737.jpg', 3, 'Boing 737', NULL, false),
+            (10, 2147483647, '2471ccae-c4bf-4db5-834c-0f7168edf7c3', 'http://test.ru/A330.swf', 'http://test.ru/A330.jpg', 3, 'Airbus A330', NULL, false);
+            SELECT setval('obj.ado_id_seq', 10);
 
             INSERT INTO obj."group"
             (id, appid, name, attr, weight, priorityid, enable, deleted)
@@ -561,8 +567,10 @@
             (1, 1001, 'Группа 001', NULL, 1000, 1, true, false),
             (2, 1002, 'Группа 002', NULL, 1000, 2, true, true),
             (3, 1003, 'Группа 003', '', 100, 3, true, false),
-            (4, 1003, 'Группа 004', 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 2, false, false);
-            SELECT setval('obj.group_id_seq', 4);
+            (4, 1003, 'Группа 004', 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 2, false, false),
+            (5, 2147483647, 'Автомобили', 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 1, true, false),
+            (6, 2147483647, 'Самолеты', 'geo=>10010001;10020001,age=>31;32;33;34;35;36'::hstore, 500, 1, true, false);
+            SELECT setval('obj.group_id_seq', 6);
 
             INSERT INTO obj.ado2group
             (oid, gid, enable)
@@ -572,7 +580,12 @@
             (3, 2, true),
             (4, 3, true),
             (5, 3, true),
-            (4, 4, true);
+            (4, 4, true),
+            (6, 5, true),
+            (7, 5, true),
+            (8, 5, false),
+            (9, 6, true),
+            (10, 6, true);
         </sql>
         <rollback>
             <sql>
@@ -600,16 +613,22 @@
             (5, 1003, 4, '', 100, 3, 1),
             (6, 1003, 5, '', 100, 3, 1),
             (7, 1003, 4, 'gen=>1,age=>18;19;20;21'::hstore, 1000, 2, 0),
-            (8, 1003, 4, 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 2, 1);
-            SELECT setval('conf.current_id_seq', 8);
+            (8, 1003, 4, 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 2, 1),
+            (9, 2147483647, 6, 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 1, 1),
+            (10, 2147483647, 7, 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 1, 1),
+            (11, 2147483647, 8, 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 1, 1),
+            (12, 2147483647, 9, 'geo=>10010001;10020001,age=>31;32;33;34;35;36'::hstore, 500, 1, 1),
+            (13, 2147483647, 10, 'geo=>10010001;10020001,age=>31;32;33;34;35;36'::hstore, 500, 1, 1);
+            SELECT setval('conf.current_id_seq', 13);
 
             INSERT INTO conf.status
             (id, appid, value, utime, cid)
             VALUES
             (1, 1001, 0, now(), 0),
             (2, 1002, 0, now(), 0),
-            (3, 1003, 0, now(), 1);
-            SELECT setval('conf.status_id_seq', 3);
+            (3, 1003, 0, now(), 1),
+            (4, 2147483647, 0, now(), 1);
+            SELECT setval('conf.status_id_seq', 4);
         </sql>
         <rollback>
             <sql>

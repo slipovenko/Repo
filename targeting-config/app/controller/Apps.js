@@ -92,11 +92,24 @@ Ext.define('Targeting.controller.Apps', {
     },
 
     onAppDelete: function(button, aEvent, aOptions) {
-        var store = this.getAppsStore(),
+        var form = this.getAppEdit(),
+            store = this.getAppsStore(),
             record = this.getAppList().getSelectionModel().getSelection()[0],
             pos = store.indexOf(record);
         store.remove(record);
-        this.getAppList().getSelectionModel().select(pos>=store.count()-1?store.count()-1:pos);
+        if(store.count()>0)
+        {
+            this.getAppList().getSelectionModel().select(pos>=store.count()-1?store.count()-1:pos);
+        }
+        else
+        {
+            Ext.getCmp('app-button-del').setDisabled(true);
+            Ext.getCmp('group-tab-panel').setDisabled(true);
+            Ext.getCmp('ado-tab-panel').setDisabled(true);
+            form.loadRecord(Ext.create('Targeting.model.App'));
+            form.setDisabled(true);
+            form.show();
+        }
         store.sync({
             success: function (b, o) {
                 console.log('Deleted app: ' + record.get('name'));

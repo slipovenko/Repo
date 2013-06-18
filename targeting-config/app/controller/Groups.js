@@ -80,7 +80,7 @@
                 // Enable buttons after selection
                 Ext.getCmp('group-button-del').setDisabled(false);
                 Ext.getCmp('group-button-upd').setDisabled(false);
-                Ext.getCmp('group-form-edit').setDisabled(false);
+                this.getGroupEdit().setDisabled(false);
                 this.application.fireEvent('groupselected', selection[0]);
             }
             else
@@ -105,7 +105,7 @@
             newGroup.set('appid', this.getAppList().getSelectionModel().getSelection()[0].get('appid'));
             newGroup.set('name', 'Новая группа');
             newGroup.set('priorityid', 1);
-            newGroup.set('weight', 1);
+            newGroup.set('weight', 0);
             newGroup.set('enable', 0);
             newGroup.set('attr', '');
             store.insert(0, newGroup);
@@ -119,11 +119,22 @@
     },
 
     onGroupDelete: function(button, aEvent, aOptions) {
-        var store = this.getGroupsStore(),
+        var form = this.getGroupEdit(),
+            store = this.getGroupsStore(),
             record = this.getGroupList().getSelectionModel().getSelection()[0],
             pos = store.indexOf(record);
         store.remove(record);
-        this.getGroupList().getSelectionModel().select(pos>=store.count()-1?store.count()-1:pos);
+        if(store.count()>0)
+        {
+            this.getGroupList().getSelectionModel().select(pos>=store.count()-1?store.count()-1:pos);
+        }
+        else
+        {
+            Ext.getCmp('group-button-del').setDisabled(true);
+            Ext.getCmp('group-button-upd').setDisabled(true);
+            form.loadRecord(Ext.create('Targeting.model.Group'));
+            form.setDisabled(true);
+        }
         store.sync({
             success: function (b, o) {
                 console.log('Deleted group: ' + record.get('name'));
