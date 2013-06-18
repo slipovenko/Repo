@@ -247,12 +247,35 @@ sub out_group
 	{
 		case 'create'
 			{
-				my $sql = "INSERT INTO obj.group(name,attr,weight,priorityid,enable) VALUES (?, ?, ?, ?, ?)";
-				$odata{success} = "true";
+				my $sql = "INSERT INTO obj.group(appid,name,attr,weight,priorityid,enable) VALUES (?, ?, ?, ?, ?, ?) ".
+				    "RETURNING id,appid,name,attr,weight,priorityid,enable";
+				my $errcnt = 0;
+
+				$dbh->begin_work();
+				foreach my $r (@idata)
+				{
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($r->{appid}, $r->{name}, $r->{attr}, $r->{weight}, $r->{priorityid}, $r->{enable});
+                    if ( $sth->err )
+                    {
+                        my %rep = ('appid' => $r->{appid}, 'name' => $r->{name}, 'attr' => $r->{attr},
+                            'weight' => $r->{weight}, 'priorityid' => $r->{priorityid}, 'enable' => $r->{enable},
+                            'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        push @{$odata{results}}, \%rep;
+                        $errcnt++;
+                    }
+                    else
+                    {
+                        push @{$odata{results}}, $sth->fetchrow_hashref();
+                    }
+                    my $rv = $sth->finish();
+                }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = "true"; }
 			}
 		case 'read'
 			{
-				my $sql = "SELECT id,name,attr,weight,priorityid,enable FROM obj.group WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
+				my $sql = "SELECT id,appid,name,attr,weight,priorityid,enable FROM obj.group WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
 				my $sth = $dbh->prepare($sql);
 				$sth->execute($self->{_cgi}->url_param('appid'));
 				while(my $group = $sth->fetchrow_hashref())
@@ -275,7 +298,8 @@ sub out_group
                     $sth->execute($r->{name}, $r->{weight}, $r->{priorityid}, $r->{enable}, $r->{id});
                     if ( $sth->err )
                     {
-                        my %rep = ('id' => $r->{id}, 'name' => $r->{name}, 'weight' => $r->{weight}, 'priorityid' => $r->{priorityid}, 'enable' => $r->{enable},
+                        my %rep = ('id' => $r->{id}, 'name' => $r->{name}, 'weight' => $r->{weight},
+                            'priorityid' => $r->{priorityid}, 'enable' => $r->{enable},
                             'err_code' => $sth->err, 'err_msg' => $sth->errstr);
                         push @{$odata{results}}, \%rep;
                         $errcnt++;
@@ -285,10 +309,26 @@ sub out_group
                 if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
                 else { $dbh->commit(); $odata{success} = "true"; }
 			}
-		case 'delete'
+		case 'destroy'
 			{
 				my $sql = "UPDATE obj.group SET deleted = true WHERE id = ?";
-				$odata{success} = "true";
+                my $errcnt = 0;
+
+                $dbh->begin_work();
+                foreach my $r (@idata)
+                {
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($r->{id});
+                    if ( $sth->err )
+                    {
+                        my %rep = ('id' => $r->{id}, 'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        push @{$odata{results}}, \%rep;
+                        $errcnt++;
+                    }
+                    my $rv = $sth->finish();
+                }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = "true"; }
 			}
 		else { $odata{success} = "false"; }
 	}

@@ -9,17 +9,13 @@ Ext.define('Targeting.view.group.List', {
             id: 'group-button-add',
             text: 'Добавить',
             iconCls: 'button-add',
-            handler: function(el) {
-                return;
-            }
+            action: 'new'
         },
         {
             id: 'group-button-del',
             text: 'Удалить',
             iconCls: 'button-del',
-            handler: function() {
-                return;
-            },
+            action: 'delete',
             disabled: true
         }
     ],

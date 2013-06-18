@@ -1,6 +1,6 @@
 Ext.define('Targeting.model.Group', {
     extend: 'Ext.data.Model',
-    fields: ['id', 'name', 'attr', 'weight', 'priorityid', 'enable'],
+    fields: ['id', 'appid', 'name', 'attr', 'weight', 'priorityid', 'enable'],
 
     proxy: {
         type: 'ajax',
