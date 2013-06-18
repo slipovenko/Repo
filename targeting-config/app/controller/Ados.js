@@ -58,11 +58,28 @@
         // Enable elements after selection
         if(selection[0] != null)
         {
-            console.log('Object selected: ' + selection[0].get('id'));
-            this.application.fireEvent('adoselected', selection[0]);
-            this.getAdoEdit().loadRecord(selection[0]);
-            Ext.getCmp('ado-button-upd').setDisabled(false);
-            Ext.getCmp('ado-form-edit').setDisabled(false);
+            var store = this.getAdosStore(),
+                form = this.getAdoEdit(),
+                record = form.getRecord(),
+                values = form.getValues(),
+                pos = store.indexOf(record);
+            if(form.isValid() || (!form.isValid() && pos<0))
+            {
+                console.log('Object selected: ' + selection[0].get('id'));
+                // Update only if record is loaded, changes made and record exists in store
+                if(typeof record != 'undefined' && form.isDirty() && pos>=0) { record.set(values); }
+                // Load new record
+                form.loadRecord(selection[0]);
+                // Enable buttons after selection
+                Ext.getCmp('ado-button-upd').setDisabled(false);
+                Ext.getCmp('ado-form-edit').setDisabled(false);
+                this.application.fireEvent('adoselected', selection[0]);
+            }
+            else
+            {
+                this.getAdoList().getSelectionModel().select(store.indexOf(record));
+                Ext.Msg.alert('Ошибка','Поля заполнены неверно!');
+            }
         }
     },
 
@@ -73,12 +90,26 @@
     },
 
     onAdoUpdate: function(button, aEvent, aOptions) {
-        var form = button.up('form'),
+        var form = this.getAdoEdit(),
             record = form.getRecord(),
             values = form.getValues();
 
-        record.set(values);
-        this.getAdosStore().sync();
         console.log('Saved object: ' + record.get('name'));
+        if(form.isValid())
+        {
+            record.set(values);
+            this.getAdosStore().sync({
+                success: function (b, o) {
+                    console.log('Saved object: ' + record.get('name'));
+                },
+                failure: function (b, o) {
+                    console.log('ERROR saving object: ' + record.get('name'));
+                }
+            });
+        }
+        else
+        {
+            Ext.Msg.alert('Ошибка','Поля заполнены неверно!');
+        }
     }
 });

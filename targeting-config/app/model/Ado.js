@@ -1,6 +1,6 @@
 Ext.define('Targeting.model.Ado', {
     extend: 'Ext.data.Model',
-    fields: ['id', 'uuid', 'flink', 'ilink', 'tid', 'name', 'attr'],
+    fields: ['id', 'appid', 'uuid', 'flink', 'ilink', 'tid', 'name', 'attr'],
 
     proxy: {
         type: 'ajax',
