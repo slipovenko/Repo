@@ -49,10 +49,17 @@ sub out
 	if($dtype eq 'json')
 	{
 		$header = "Content-type: application/json\n\n";
-		my $pdata = $self->{_cgi}->param( 'POSTDATA' );
-		if($pdata =~ /^\s*((\{.*\})|(\[.*\]))\s*$/)
+		$self->{_idata} = [];
+		if($self->{_cgi}->request_method() eq 'POST')
 		{
-			$self->{_idata} = decode_json($pdata);
+            my $pdata = $self->{_cgi}->param( 'POSTDATA' );
+            if($pdata =~ /^\s*((\{.*\})|(\[.*\]))\s*$/)
+            {
+                my $idata = decode_json($pdata);
+                if(ref $idata eq 'HASH') { push( @{$self->{_idata}}, $idata ); }
+                elsif(ref $idata eq 'ARRAY') { $self->{_idata} = $idata; }
+                else { return $header.'{success:false}';}
+            }
 		}
 	}
 	else
@@ -79,7 +86,7 @@ sub out_app
 {
 	my($self) = @_;
 	my %odata;
-	my @idata;
+	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
 
 	switch($self->{_action})
@@ -88,9 +95,6 @@ sub out_app
 			{
 				my $sql = "INSERT INTO obj.app(appid,name) VALUES (?, ?) RETURNING id,appid,name";
 				my $errcnt = 0;
-
-                if(ref $self->{_idata} eq 'HASH') { push( @idata, \%{$self->{_idata}} ); }
-                else { @idata = @{$self->{_idata}}; }
 
 				$dbh->begin_work();
 				foreach my $r (@idata)
@@ -130,9 +134,6 @@ sub out_app
 				my $sql = "UPDATE obj.app SET appid = ?, name = ? WHERE id = ? AND deleted != true";
 				my $errcnt = 0;
 
-                if(ref $self->{_idata} eq 'HASH') { push( @idata, \%{$self->{_idata}} ); }
-                else { @idata = @{$self->{_idata}}; }
-
 				$dbh->begin_work();
 				foreach my $r (@idata)
 				{
@@ -153,9 +154,6 @@ sub out_app
 			{
 				my $sql = "UPDATE obj.app SET deleted = true WHERE id = ?";
                 my $errcnt = 0;
-
-                if(ref $self->{_idata} eq 'HASH') { push( @idata, \%{$self->{_idata}} ); }
-                else { @idata = @{$self->{_idata}}; }
 
                 $dbh->begin_work();
                 foreach my $r (@idata)
@@ -183,15 +181,15 @@ sub out_ado
 {
 	my($self) = @_;
 	my %odata;
+	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
-	my $idata = \%{$self->{_idata}};
 
 	switch($self->{_action})
 	{
 		case 'create'
 			{
 				my $sql = "INSERT INTO obj.ado(appid,uuid,flink,ilink,tid,name,attr) VALUES (?, ?, ?, ?, ?, ?, ?)";
-				$odata{success} = "true";
+				$odata{success} = "false";
 			}
 		case 'read'
 			{
@@ -209,20 +207,30 @@ sub out_ado
 		case 'update'
 			{
 				my $sql = "UPDATE obj.ado SET name = ?, tid = ? WHERE id = ? AND deleted != true";
-				if($idata->{id} =~ /\d+/)
-				{						
-					my $sth = $dbh->prepare($sql);
-					$sth->execute($idata->{name}, $idata->{tid}, $idata->{id});
-					if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-					else { $odata{success} = "true"; }
-					my $rv = $sth->finish();
-				}
+				my $errcnt = 0;
+
+				$dbh->begin_work();
+				foreach my $r (@idata)
+				{
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($r->{name}, $r->{tid}, $r->{id});
+                    if ( $sth->err )
+                    {
+                        my %rep = ('id' => $r->{id}, 'name' => $r->{name}, 'tid' => $r->{tid}, 'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        push @{$odata{results}}, \%rep;
+                        $errcnt++;
+                    }
+                    my $rv = $sth->finish();
+                }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = "true"; }
 			}
-		case 'delete'
+		case 'destroy'
 			{
 				my $sql = "UPDATE obj.ado SET deleted = true WHERE id = ?";
-				$odata{success} = "true";
+				$odata{success} = "false";
 			}
+		else { $odata{success} = "false"; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -232,8 +240,8 @@ sub out_group
 {
 	my($self) = @_;
 	my %odata;
+	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
-	my $idata = \%{$self->{_idata}};
 
 	switch($self->{_action})
 	{
@@ -258,20 +266,31 @@ sub out_group
 		case 'update'
 			{
 				my $sql = "UPDATE obj.group SET name = ?, weight = ?, priorityid = ?, enable = ? WHERE id = ? AND deleted != true";
-				if($idata->{id} =~ /\d+/)
-				{						
-					my $sth = $dbh->prepare($sql);
-					$sth->execute($idata->{name}, $idata->{weight}, $idata->{priorityid}, $idata->{enable}, $idata->{id});
-					if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-					else { $odata{success} = "true"; }
-					my $rv = $sth->finish();
-				}
+				my $errcnt = 0;
+
+				$dbh->begin_work();
+				foreach my $r (@idata)
+				{
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($r->{name}, $r->{weight}, $r->{priorityid}, $r->{enable}, $r->{id});
+                    if ( $sth->err )
+                    {
+                        my %rep = ('id' => $r->{id}, 'name' => $r->{name}, 'weight' => $r->{weight}, 'priorityid' => $r->{priorityid}, 'enable' => $r->{enable},
+                            'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        push @{$odata{results}}, \%rep;
+                        $errcnt++;
+                    }
+                    my $rv = $sth->finish();
+                }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = "true"; }
 			}
 		case 'delete'
 			{
 				my $sql = "UPDATE obj.group SET deleted = true WHERE id = ?";
 				$odata{success} = "true";
 			}
+		else { $odata{success} = "false"; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -298,6 +317,7 @@ sub out_attr
 				else { $odata{success} = "true"; }
 				my $rv = $sth->finish();
 			}
+		else { $odata{success} = "false"; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -324,6 +344,7 @@ sub out_attrvalue
 				else { $odata{success} = "true"; }
 				my $rv = $sth->finish();
 			}
+		else { $odata{success} = "false"; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -350,6 +371,7 @@ sub out_priority
 				else { $odata{success} = "true"; }
 				my $rv = $sth->finish();
 			}
+		else { $odata{success} = "false"; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -376,6 +398,7 @@ sub out_type
 				else { $odata{success} = "true"; }
 				my $rv = $sth->finish();
 			}
+		else { $odata{success} = "false"; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
