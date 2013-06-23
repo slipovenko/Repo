@@ -13,7 +13,7 @@
     }],
 
     views: ['group.List', 'group.Edit'],
-    stores: ['Apps','Groups'],
+    stores: ['Apps','Groups','GroupAttrs'],
 
     init: function() {
 
@@ -82,6 +82,13 @@
                 Ext.getCmp('group-button-upd').setDisabled(false);
                 this.getGroupEdit().setDisabled(false);
                 this.application.fireEvent('groupselected', selection[0]);
+                var attr = Ext.create('Targeting.store.GroupAttrs');
+                attr.load({
+                    params: {
+                        id: selection[0].get('id')
+                    },
+                    scope: this
+                });
             }
             else
             {

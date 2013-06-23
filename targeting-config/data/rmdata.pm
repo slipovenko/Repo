@@ -74,6 +74,7 @@ sub out
 		case 'app' {$out = $self->out_app();}
 		case 'ado' {$out = $self->out_ado();}
 		case 'group' {$out = $self->out_group();}
+		case 'group.attr' {$out = $self->out_groupattr();}
 		case 'dict.attr' {$out = $self->out_attr();}
 		case 'dict.attrvalue' {$out = $self->out_attrvalue();}
 		case 'dict.priority' {$out = $self->out_priority();}
@@ -329,6 +330,38 @@ sub out_group
                 }
                 if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
                 else { $dbh->commit(); $odata{success} = "true"; }
+			}
+		else { $odata{success} = "false"; }
+	}
+
+	return JSON::XS->new->encode(\%odata);
+}
+
+sub out_groupattr
+{
+	my($self) = @_;
+	my %odata;
+	my @idata = @{$self->{_idata}};
+	my $dbh = $self->{_db};
+
+	switch($self->{_action})
+	{
+		case 'read'
+			{
+				my $sql = "SELECT g.id AS id, a.id AS aid, g.values FROM ".
+                            "(SELECT id, (each(attr)).key as tag, (each(attr)).value as values ".
+                            "FROM obj.group WHERE id = ?) g ".
+                            "INNER JOIN dict.attr a ".
+                            "USING(tag)";
+				my $sth = $dbh->prepare($sql);
+				$sth->execute($self->{_cgi}->url_param('id'));
+				while(my $groupattr = $sth->fetchrow_hashref())
+				{
+					push @{$odata{results}}, $groupattr;
+				}
+				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = "true"; }
+				my $rv = $sth->finish();
 			}
 		else { $odata{success} = "false"; }
 	}
