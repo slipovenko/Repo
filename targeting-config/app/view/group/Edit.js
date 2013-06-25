@@ -5,6 +5,7 @@ Ext.define('Targeting.view.group.Edit', {
     store: 'Groups',
 
     autoShow: true,
+    autoScroll: true,
 
     tbar: [
         {
@@ -48,10 +49,10 @@ Ext.define('Targeting.view.group.Edit', {
                 fieldLabel: 'Активна'
             },
             {
-                xtype: 'textfield',
-                name : 'attr',
-                fieldLabel: 'Таргетинг',
-                readOnly: true
+                xtype: 'groupattrgeo',
+                width: 600,
+                height: 300,
+                rootVisible: false
             }
         ];
 

@@ -29,7 +29,7 @@ Ext.define('Targeting.view.group.List', {
             {header: 'Состояние', dataIndex: 'enable',  flex: 1, renderer: function(value) {
                 return value=='1'?'Активна':'Неактивна';
             }},
-            {header: 'Вес', dataIndex: 'weight',  flex: 1},
+            {header: 'Вес', dataIndex: 'weight',  flex: 1}
         ];
 
         this.callParent(arguments);

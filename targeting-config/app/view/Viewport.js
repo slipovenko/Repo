@@ -10,7 +10,10 @@ Ext.define('Targeting.view.Viewport', {
         'Targeting.view.app.List',
         'Targeting.view.app.Edit',
         'Targeting.view.ado.List',
-        'Targeting.view.group.List'
+        'Targeting.view.ado.Edit',
+        'Targeting.view.group.List',
+        'Targeting.view.group.Edit',
+        'Targeting.view.group.attr.Geo',
     ],
     
     initComponent: function() {
@@ -22,7 +25,7 @@ Ext.define('Targeting.view.Viewport', {
             layout: 'border',
             items: [{
                     xtype: 'grouplist',
-                    height: '50%',
+                    height: '33%',
                     width: '100%',
                     region: 'center',
                     layout: 'fit',
@@ -31,7 +34,7 @@ Ext.define('Targeting.view.Viewport', {
                     id: 'group-form-edit',
                     xtype: 'groupedit',
                     disabled: true,
-                    height: '50%',
+                    height: '66%',
                     width: '100%',
                     region: 'south',
                     split: true,
