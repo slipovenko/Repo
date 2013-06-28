@@ -1,6 +1,6 @@
 Ext.define('Targeting.model.dict.Attribute', {
     extend: 'Ext.data.Model',
-    fields: ['id', 'tag', 'name'],
+    fields: ['id', 'tag', 'value', 'name'],
 
     proxy: {
         type: 'ajax',

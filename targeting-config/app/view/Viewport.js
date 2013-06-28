@@ -13,7 +13,7 @@ Ext.define('Targeting.view.Viewport', {
         'Targeting.view.ado.Edit',
         'Targeting.view.group.List',
         'Targeting.view.group.Edit',
-        'Targeting.view.group.attr.Geo',
+        'Targeting.view.group.AttrTree',
     ],
     
     initComponent: function() {

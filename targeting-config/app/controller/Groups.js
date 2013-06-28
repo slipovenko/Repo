@@ -13,7 +13,7 @@
     }],
 
     views: ['group.List', 'group.Edit'],
-    stores: ['Apps','Groups','GroupAttrs'],
+    stores: ['Apps', 'Groups', 'GroupAttrs'],
 
     init: function() {
 

@@ -1,6 +1,5 @@
 Ext.define('Targeting.model.GroupAttr', {
-    extend: 'Ext.data.Model',
-    fields: ['id', 'aid', 'values'],
+    extend: 'Targeting.model.dict.Attribute',
 
     proxy: {
         type: 'ajax',

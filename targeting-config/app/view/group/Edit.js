@@ -49,7 +49,7 @@ Ext.define('Targeting.view.group.Edit', {
                 fieldLabel: 'Активна'
             },
             {
-                xtype: 'groupattrgeo',
+                xtype: 'groupattrtree',
                 width: 600,
                 height: 300,
                 rootVisible: false

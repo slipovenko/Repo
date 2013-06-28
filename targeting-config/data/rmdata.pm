@@ -76,7 +76,6 @@ sub out
 		case 'group' {$out = $self->out_group();}
 		case 'group.attr' {$out = $self->out_groupattr();}
 		case 'dict.attr' {$out = $self->out_attr();}
-		case 'dict.attrvalue' {$out = $self->out_attrvalue();}
 		case 'dict.priority' {$out = $self->out_priority();}
 		case 'dict.type' {$out = $self->out_type();}
 	}
@@ -114,8 +113,8 @@ sub out_app
                     }
                     my $rv = $sth->finish();
                 }
-                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
-                else { $dbh->commit(); $odata{success} = "true"; }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = JSON::XS::true; }
 			}
 		case 'read'
 			{
@@ -126,8 +125,8 @@ sub out_app
 				{
 					push @{$odata{results}}, $app;
 				}
-				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = "true"; }
+				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = JSON::XS::true; }
 				my $rv = $sth->finish();
 			}
 		case 'update'
@@ -148,8 +147,8 @@ sub out_app
                     }
                     my $rv = $sth->finish();
                 }
-                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
-                else { $dbh->commit(); $odata{success} = "true"; }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = JSON::XS::true; }
 			}
 		case 'destroy'
 			{
@@ -169,10 +168,10 @@ sub out_app
                     }
                     my $rv = $sth->finish();
                 }
-                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
-                else { $dbh->commit(); $odata{success} = "true"; }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = JSON::XS::true; }
 			}
-		else { $odata{success} = "false"; }
+		else { $odata{success} = JSON::XS::false; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -190,7 +189,7 @@ sub out_ado
 		case 'create'
 			{
 				my $sql = "INSERT INTO obj.ado(appid,uuid,flink,ilink,tid,name,attr) VALUES (?, ?, ?, ?, ?, ?, ?)";
-				$odata{success} = "false";
+				$odata{success} = JSON::XS::false;
 			}
 		case 'read'
 			{
@@ -201,8 +200,8 @@ sub out_ado
 				{
 					push @{$odata{results}}, $ado;
 				}
-				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = "true"; }
+				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = JSON::XS::true; }
 				my $rv = $sth->finish();
 			}
 		case 'update'
@@ -223,15 +222,15 @@ sub out_ado
                     }
                     my $rv = $sth->finish();
                 }
-                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
-                else { $dbh->commit(); $odata{success} = "true"; }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = JSON::XS::true; }
 			}
 		case 'destroy'
 			{
 				my $sql = "UPDATE obj.ado SET deleted = true WHERE id = ?";
-				$odata{success} = "false";
+				$odata{success} = JSON::XS::false;
 			}
-		else { $odata{success} = "false"; }
+		else { $odata{success} = JSON::XS::false; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -271,8 +270,8 @@ sub out_group
                     }
                     my $rv = $sth->finish();
                 }
-                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
-                else { $dbh->commit(); $odata{success} = "true"; }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = JSON::XS::true; }
 			}
 		case 'read'
 			{
@@ -283,8 +282,8 @@ sub out_group
 				{
 					push @{$odata{results}}, $group;
 				}
-				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = "true"; }
+				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = JSON::XS::true; }
 				my $rv = $sth->finish();
 			}
 		case 'update'
@@ -307,8 +306,8 @@ sub out_group
                     }
                     my $rv = $sth->finish();
                 }
-                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
-                else { $dbh->commit(); $odata{success} = "true"; }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = JSON::XS::true; }
 			}
 		case 'destroy'
 			{
@@ -328,10 +327,10 @@ sub out_group
                     }
                     my $rv = $sth->finish();
                 }
-                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = "false"; $odata{errcnt} = $errcnt; }
-                else { $dbh->commit(); $odata{success} = "true"; }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = JSON::XS::true; }
 			}
-		else { $odata{success} = "false"; }
+		else { $odata{success} = JSON::XS::false; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -359,11 +358,11 @@ sub out_groupattr
 				{
 					push @{$odata{results}}, $groupattr;
 				}
-				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = "true"; }
+				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = JSON::XS::true; }
 				my $rv = $sth->finish();
 			}
-		else { $odata{success} = "false"; }
+		else { $odata{success} = JSON::XS::false; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -374,50 +373,43 @@ sub out_attr
 	my($self) = @_;
 	my %odata;
 	my $dbh = $self->{_db};
+	my $node = defined($self->{_cgi}->url_param('node'))?$self->{_cgi}->url_param('node'):'root';
 
 	switch($self->{_action})
 	{
 		case 'read'
 			{
-				my $sql = "SELECT id, tag, name FROM dict.attr WHERE deleted != true ORDER BY 1 ASC";
-				my $sth = $dbh->prepare($sql);
-				$sth->execute();
-				while(my $group = $sth->fetchrow_hashref())
-				{
-					push @{$odata{results}}, $group;
+			    if($node eq 'root')
+			    {
+                    my $sql = "SELECT tag AS id, tag, name FROM dict.attr WHERE deleted != true ORDER BY id ASC";
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute();
+                    while(my $attr = $sth->fetchrow_hashref())
+                    {
+                        $attr->{expandable} = JSON::XS::true;
+                        push @{$odata{results}}, $attr;
+                    }
+                    if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+                    else { $odata{success} = JSON::XS::true; }
+                    my $rv = $sth->finish();
 				}
-				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = "true"; }
-				my $rv = $sth->finish();
-			}
-		else { $odata{success} = "false"; }
-	}
-
-	return JSON::XS->new->encode(\%odata);
-}
-
-sub out_attrvalue
-{
-	my($self) = @_;
-	my %odata;
-	my $dbh = $self->{_db};
-
-	switch($self->{_action})
-	{
-		case 'read'
-			{
-				my $sql = "SELECT id, value, name FROM dict.attr_value WHERE aid = ? AND deleted != true ORDER BY 1 ASC";
-				my $sth = $dbh->prepare($sql);
-				$sth->execute($self->{_cgi}->url_param('attrid'));
-				while(my $group = $sth->fetchrow_hashref())
-				{
-					push @{$odata{results}}, $group;
+				else {
+                    my $sql = "SELECT id, value, name FROM dict.attr_value ".
+                            "WHERE aid = (SELECT id FROM dict.attr WHERE tag = ?) AND deleted != true ORDER BY 1 ASC";
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($self->{_cgi}->url_param('node'));
+                    while(my $attrv = $sth->fetchrow_hashref())
+                    {
+                        $attrv->{leaf} = JSON::XS::true;
+                        $attrv->{checked} = JSON::XS::false;
+                        push @{$odata{results}}, $attrv;
+                    }
+                    if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+                    else { $odata{success} = JSON::XS::true; }
+                    my $rv = $sth->finish();
 				}
-				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = "true"; }
-				my $rv = $sth->finish();
 			}
-		else { $odata{success} = "false"; }
+		else { $odata{success} = JSON::XS::false; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -440,11 +432,11 @@ sub out_priority
 				{
 					push @{$odata{results}}, $group;
 				}
-				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = "true"; }
+				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = JSON::XS::true; }
 				my $rv = $sth->finish();
 			}
-		else { $odata{success} = "false"; }
+		else { $odata{success} = JSON::XS::false; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
@@ -467,11 +459,11 @@ sub out_type
 				{
 					push @{$odata{results}}, $group;
 				}
-				if ( $sth->err ) { $odata{success} = "false"; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = "true"; }
+				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+				else { $odata{success} = JSON::XS::true; }
 				my $rv = $sth->finish();
 			}
-		else { $odata{success} = "false"; }
+		else { $odata{success} = JSON::XS::false; }
 	}
 
 	return JSON::XS->new->encode(\%odata);
