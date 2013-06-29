@@ -511,16 +511,27 @@
             SELECT dict.attr_add_value('gen','2','Женский');
         </sql>
         <createProcedure>
+        <![CDATA[
             -- Age
             DO $$
-            DECLARE y integer;
+            DECLARE
+                y integer;
+                ystr varchar;
             BEGIN
                 PERFORM dict.attr_add_value('age','0','Не определен');
                 FOR y IN 1..100 LOOP
-                    PERFORM dict.attr_add_value('age',y::varchar,NULL);
+                    IF y % 10 > 4 OR y % 10 = 0 OR (y >= 10 AND y <= 20) THEN
+                        ystr = ' лет';
+                    ELSIF y % 10 = 1 THEN
+                        ystr = ' год';
+                    ELSE
+                        ystr = ' года';
+                    END IF;
+                    PERFORM dict.attr_add_value('age',y::varchar,y::varchar||ystr);
                 END LOOP;
             END
             $$;
+        ]]>
         </createProcedure>
         <sql>
             -- Context

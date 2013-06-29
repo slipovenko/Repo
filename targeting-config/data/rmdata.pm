@@ -343,25 +343,22 @@ sub out_groupattr
 	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
 
-	switch($self->{_action})
-	{
-		case 'read'
-			{
-				my $sql = "SELECT g.id AS id, a.id AS aid, g.values FROM ".
-                            "(SELECT id, (each(attr)).key as tag, (each(attr)).value as values ".
-                            "FROM obj.group WHERE id = ?) g ".
-                            "INNER JOIN dict.attr a ".
-                            "USING(tag)";
-				my $sth = $dbh->prepare($sql);
-				$sth->execute($self->{_cgi}->url_param('id'));
-				while(my $groupattr = $sth->fetchrow_hashref())
-				{
-					push @{$odata{results}}, $groupattr;
-				}
-				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = JSON::XS::true; }
-				my $rv = $sth->finish();
-			}
+	switch($self->{_action}) {
+		case 'read' {
+            my $sql = "SELECT g.id AS id, a.id AS aid, g.values FROM ".
+                        "(SELECT id, (each(attr)).key as tag, (each(attr)).value as values ".
+                        "FROM obj.group WHERE id = ?) g ".
+                        "INNER JOIN dict.attr a ".
+                        "USING(tag)";
+            my $sth = $dbh->prepare($sql);
+            $sth->execute($self->{_cgi}->url_param('id'));
+            while(my $groupattr = $sth->fetchrow_hashref()) {
+                push @{$odata{results}}, $groupattr;
+            }
+            if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+            else { $odata{success} = JSON::XS::true; }
+            my $rv = $sth->finish();
+        }
 		else { $odata{success} = JSON::XS::false; }
 	}
 
@@ -375,31 +372,63 @@ sub out_attr
 	my $dbh = $self->{_db};
 	my $node = defined($self->{_cgi}->url_param('node'))?$self->{_cgi}->url_param('node'):'root';
 
-	switch($self->{_action})
-	{
-		case 'read'
-			{
-			    if($node eq 'root')
-			    {
+	switch($self->{_action}) {
+		case 'read' {
+            switch($node) {
+                case 'root' {
                     my $sql = "SELECT tag AS id, tag, name FROM dict.attr WHERE deleted != true ORDER BY id ASC";
                     my $sth = $dbh->prepare($sql);
                     $sth->execute();
-                    while(my $attr = $sth->fetchrow_hashref())
-                    {
+                    while(my $attr = $sth->fetchrow_hashref()) {
                         $attr->{expandable} = JSON::XS::true;
                         push @{$odata{results}}, $attr;
                     }
                     if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
                     else { $odata{success} = JSON::XS::true; }
                     my $rv = $sth->finish();
-				}
-				else {
-                    my $sql = "SELECT id, value, name FROM dict.attr_value ".
-                            "WHERE aid = (SELECT id FROM dict.attr WHERE tag = ?) AND deleted != true ORDER BY 1 ASC";
+                }
+                case 'geo' {
+                    my $sql = "SELECT v.id, a.tag, v.value, v.name INTO TEMP tmpgeo FROM dict.attr_value v ".
+                            "INNER JOIN dict.attr a ON v.aid=a.id ".
+                            "WHERE a.tag = ? AND v.deleted != true ORDER BY v.value ASC";
                     my $sth = $dbh->prepare($sql);
                     $sth->execute($self->{_cgi}->url_param('node'));
-                    while(my $attrv = $sth->fetchrow_hashref())
-                    {
+                    my $rv = $sth->finish();
+
+                    $sql = 'SELECT id, tag, value, name FROM tmpgeo WHERE CAST(value AS integer) < 10000000';
+                    $sth = $dbh->prepare($sql);
+                    $sth->execute();
+                    while(my $attrv = $sth->fetchrow_hashref()) {
+                        $attrv->{leaf} = JSON::XS::true;
+                        $attrv->{checked} = JSON::XS::false;
+                        push @{$odata{results}}, $attrv;
+                    }
+                    if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+                    else { $odata{success} = JSON::XS::true; }
+                    $rv = $sth->finish();
+
+                    $sql = "SELECT 'geo'||(10000000*(CAST(value AS integer) / 10000000)) AS id, ".
+                            "tag, 10000000*(CAST(value AS integer) / 10000000) AS value, ".
+                            "split_part(name, ';', 1) AS name FROM tmpgeo WHERE CAST(value AS integer) >= 10000000 ".
+                            "GROUP BY 1,2,3,4 ORDER BY 1";
+                    $sth = $dbh->prepare($sql);
+                    $sth->execute();
+                    while(my $attrv = $sth->fetchrow_hashref()) {
+                        $attrv->{expandable} = JSON::XS::true;
+                        $attrv->{checked} = JSON::XS::false;
+                        push @{$odata{results}}, $attrv;
+                    }
+                    if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+                    else { $odata{success} = JSON::XS::true; }
+                    $rv = $sth->finish();
+                }
+                else {
+                    my $sql = "SELECT v.id, a.tag, v.value, v.name FROM dict.attr_value v ".
+                            "INNER JOIN dict.attr a ON v.aid=a.id ".
+                            "WHERE a.tag = ? AND v.deleted != true ORDER BY v.value ASC";
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($self->{_cgi}->url_param('node'));
+                    while(my $attrv = $sth->fetchrow_hashref()) {
                         $attrv->{leaf} = JSON::XS::true;
                         $attrv->{checked} = JSON::XS::false;
                         push @{$odata{results}}, $attrv;
@@ -407,8 +436,9 @@ sub out_attr
                     if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
                     else { $odata{success} = JSON::XS::true; }
                     my $rv = $sth->finish();
-				}
-			}
+                }
+            }
+		}
 		else { $odata{success} = JSON::XS::false; }
 	}
 
@@ -421,21 +451,18 @@ sub out_priority
 	my %odata;
 	my $dbh = $self->{_db};
 
-	switch($self->{_action})
-	{
-		case 'read'
-			{
-				my $sql = "SELECT id, value, name FROM dict.priority WHERE deleted != true ORDER BY 1 ASC";
-				my $sth = $dbh->prepare($sql);
-				$sth->execute();
-				while(my $group = $sth->fetchrow_hashref())
-				{
-					push @{$odata{results}}, $group;
-				}
-				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = JSON::XS::true; }
-				my $rv = $sth->finish();
-			}
+	switch($self->{_action}) {
+		case 'read' {
+            my $sql = "SELECT id, value, name FROM dict.priority WHERE deleted != true ORDER BY 1 ASC";
+            my $sth = $dbh->prepare($sql);
+            $sth->execute();
+            while(my $group = $sth->fetchrow_hashref()) {
+                push @{$odata{results}}, $group;
+            }
+            if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+            else { $odata{success} = JSON::XS::true; }
+            my $rv = $sth->finish();
+        }
 		else { $odata{success} = JSON::XS::false; }
 	}
 
@@ -448,21 +475,18 @@ sub out_type
 	my %odata;
 	my $dbh = $self->{_db};
 
-	switch($self->{_action})
-	{
-		case 'read'
-			{
-				my $sql = "SELECT id, mtype, name FROM dict.type WHERE deleted != true ORDER BY 1 ASC";
-				my $sth = $dbh->prepare($sql);
-				$sth->execute();
-				while(my $group = $sth->fetchrow_hashref())
-				{
-					push @{$odata{results}}, $group;
-				}
-				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-				else { $odata{success} = JSON::XS::true; }
-				my $rv = $sth->finish();
-			}
+	switch($self->{_action}) {
+		case 'read' {
+            my $sql = "SELECT id, mtype, name FROM dict.type WHERE deleted != true ORDER BY 1 ASC";
+            my $sth = $dbh->prepare($sql);
+            $sth->execute();
+            while(my $group = $sth->fetchrow_hashref()) {
+                push @{$odata{results}}, $group;
+            }
+            if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+            else { $odata{success} = JSON::XS::true; }
+            my $rv = $sth->finish();
+        }
 		else { $odata{success} = JSON::XS::false; }
 	}
 
