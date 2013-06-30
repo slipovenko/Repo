@@ -12,7 +12,7 @@
         selector: 'applist'
     }],
 
-    views: ['group.List', 'group.Edit'],
+    views: ['group.List', 'group.Edit', 'group.AttrTree'],
     stores: ['Apps', 'Groups', 'GroupAttrs'],
 
     init: function() {
@@ -29,6 +29,9 @@
             },
             'groupedit button[action=save]': {
                 click: this.onGroupUpdate
+            },
+            'groupattrtree': {
+                checkchange: this.onGroupAttrTreeCheckChange
             }
         });
 
@@ -174,5 +177,9 @@
         {
             Ext.Msg.alert('Ошибка','Поля заполнены неверно!');
         }
+    },
+
+    onGroupAttrTreeCheckChange: function(node, checked, options) {
+        node.cascadeBy(function(n){n.set('checked', checked);} );
     }
 });

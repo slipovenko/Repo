@@ -9,7 +9,7 @@ Ext.define('Targeting.model.dict.Attribute', {
         },
         reader: {
             type: 'json',
-            root: 'results',
+            root: 'children',
             successProperty: 'success'
         }
     }

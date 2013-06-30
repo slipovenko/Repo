@@ -381,57 +381,94 @@ sub out_attr
                     $sth->execute();
                     while(my $attr = $sth->fetchrow_hashref()) {
                         $attr->{expandable} = JSON::XS::true;
-                        push @{$odata{results}}, $attr;
+                        push @{$odata{children}}, $attr;
                     }
                     if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
                     else { $odata{success} = JSON::XS::true; }
                     my $rv = $sth->finish();
                 }
                 case 'geo' {
-                    my $sql = "SELECT v.id, a.tag, v.value, v.name INTO TEMP tmpgeo FROM dict.attr_value v ".
+                    my $sql = "SELECT id, tag, value, name, ".
+                            "CAST(value AS integer) / 10000000 AS value1, CAST(value AS integer) / 10000 AS value2, CAST(value AS integer) AS value3, ".
+                            "split_part(name, ';', 1) AS name1, split_part(name, ';', 2) AS name2, split_part(name, ';', 3) AS name3 ".
+                            "INTO TEMP tmpgeo FROM ".
+                            "(SELECT v.id, a.tag, v.value, v.name FROM dict.attr_value v ".
                             "INNER JOIN dict.attr a ON v.aid=a.id ".
-                            "WHERE a.tag = ? AND v.deleted != true ORDER BY v.value ASC";
+                            "WHERE a.tag = ? AND v.deleted != true) g ".
+                            "ORDER BY value ASC";
                     my $sth = $dbh->prepare($sql);
                     $sth->execute($self->{_cgi}->url_param('node'));
                     my $rv = $sth->finish();
 
-                    $sql = 'SELECT id, tag, value, name FROM tmpgeo WHERE CAST(value AS integer) < 10000000';
-                    $sth = $dbh->prepare($sql);
-                    $sth->execute();
-                    while(my $attrv = $sth->fetchrow_hashref()) {
-                        $attrv->{leaf} = JSON::XS::true;
-                        $attrv->{checked} = JSON::XS::false;
-                        push @{$odata{results}}, $attrv;
-                    }
-                    if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
-                    else { $odata{success} = JSON::XS::true; }
-                    $rv = $sth->finish();
+                    $sql = "SELECT tag,10000000*value1 AS value, name1 AS name, COUNT(*) AS cnt ".
+                            "FROM tmpgeo GROUP BY 1,2,3 ORDER BY 2";
+                    my $sth1 = $dbh->prepare($sql);
+                    $sth1->execute();
+                    while(my $attrv1 = $sth1->fetchrow_hashref()) {
+                        $attrv1->{checked} = JSON::XS::false;
+                        if($attrv1->{cnt} == 1) {
+                            $sql = "SELECT id FROM tmpgeo WHERE 10000000*value1 = ? AND name1 = ?";
+                            my $sth = $dbh->prepare($sql);
+                            $sth->execute($attrv1->{value}, $attrv1->{name});
+                            ($attrv1->{id}) = $sth->fetchrow_array();
+                            my $rv = $sth->finish();
+                            $attrv1->{leaf} = JSON::XS::true;
+                            push @{$odata{children}}, $attrv1;
+                        }
+                        else {
+                            $attrv1->{id} = $attrv1->{tag}.$attrv1->{value};
+                            $attrv1->{expandable} = JSON::XS::true;
+                            $sql = "SELECT tag, 10000*value2 AS value, name2 AS name, COUNT(*) AS cnt ".
+                                    "FROM tmpgeo WHERE value1 = ? GROUP BY 1,2,3 ORDER BY 2";
+                            my $sth2 = $dbh->prepare($sql);
+                            $sth2->execute($attrv1->{value}/10000000);
+                            while(my $attrv2 = $sth2->fetchrow_hashref()) {
+                                $attrv2->{checked} = JSON::XS::false;
+                                if($attrv2->{cnt} == 1) {
+                                    $sql = "SELECT id FROM tmpgeo WHERE 10000*value2 = ? AND name2 = ?";
+                                    my $sth = $dbh->prepare($sql);
+                                    $sth->execute($attrv2->{value}, $attrv2->{name});
+                                    ($attrv2->{id}) = $sth->fetchrow_array();
+                                    my $rv = $sth->finish();
+                                    $attrv2->{leaf} = JSON::XS::true;
+                                    push @{$attrv1->{children}}, $attrv2;
+                                }
+                                else {
+                                    $attrv2->{id} = $attrv2->{tag}.$attrv2->{value};
+                                    $attrv2->{expandable} = JSON::XS::true;
+                                    $sql = "SELECT id, tag, value3 AS value, name3 AS name ".
+                                            "FROM tmpgeo WHERE value2 = ? ORDER BY 3";
+                                    my $sth3 = $dbh->prepare($sql);
+                                    $sth3->execute($attrv2->{value}/10000);
+                                    while(my $attrv3 = $sth3->fetchrow_hashref()) {
+                                        $attrv3->{leaf} = JSON::XS::true;
+                                        $attrv3->{checked} = JSON::XS::false;
+                                        push @{$attrv2->{children}}, $attrv3;
+                                    }
+                                    push @{$attrv1->{children}}, $attrv2;
+                                }
 
-                    $sql = "SELECT 'geo'||(10000000*(CAST(value AS integer) / 10000000)) AS id, ".
-                            "tag, 10000000*(CAST(value AS integer) / 10000000) AS value, ".
-                            "split_part(name, ';', 1) AS name FROM tmpgeo WHERE CAST(value AS integer) >= 10000000 ".
-                            "GROUP BY 1,2,3,4 ORDER BY 1";
-                    $sth = $dbh->prepare($sql);
-                    $sth->execute();
-                    while(my $attrv = $sth->fetchrow_hashref()) {
-                        $attrv->{expandable} = JSON::XS::true;
-                        $attrv->{checked} = JSON::XS::false;
-                        push @{$odata{results}}, $attrv;
+                            }
+                            push @{$odata{children}}, $attrv1;
+                            if ( $sth2->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth2->err; $odata{err_msg} = $sth2->errstr; }
+                            else { $odata{success} = JSON::XS::true; }
+                            $rv = $sth2->finish();
+                        }
                     }
-                    if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+                    if ( $sth1->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth1->err; $odata{err_msg} = $sth1->errstr; }
                     else { $odata{success} = JSON::XS::true; }
-                    $rv = $sth->finish();
+                    $rv = $sth1->finish();
                 }
                 else {
                     my $sql = "SELECT v.id, a.tag, v.value, v.name FROM dict.attr_value v ".
                             "INNER JOIN dict.attr a ON v.aid=a.id ".
-                            "WHERE a.tag = ? AND v.deleted != true ORDER BY v.value ASC";
+                            "WHERE a.tag = ? AND v.deleted != true ORDER BY v.id ASC";
                     my $sth = $dbh->prepare($sql);
                     $sth->execute($self->{_cgi}->url_param('node'));
                     while(my $attrv = $sth->fetchrow_hashref()) {
                         $attrv->{leaf} = JSON::XS::true;
                         $attrv->{checked} = JSON::XS::false;
-                        push @{$odata{results}}, $attrv;
+                        push @{$odata{children}}, $attrv;
                     }
                     if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
                     else { $odata{success} = JSON::XS::true; }
