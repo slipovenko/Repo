@@ -459,6 +459,60 @@ sub out_attr
                     else { $odata{success} = JSON::XS::true; }
                     $rv = $sth1->finish();
                 }
+                case 'age' {
+                    my $sql = "SELECT id, tag, value, name, ".
+                            "CASE WHEN CAST(value AS integer)=0 THEN CAST(value AS integer) ELSE 1+(CAST(value AS integer)-1)/10 END AS tens  ".
+                            "INTO TEMP tmpage FROM ".
+                            "(SELECT v.id, a.tag, v.value, v.name FROM dict.attr_value v ".
+                            "INNER JOIN dict.attr a ON v.aid=a.id ".
+                            "WHERE a.tag = ? AND v.deleted != true) g ".
+                            "ORDER BY value ASC";
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($self->{_cgi}->url_param('node'));
+                    my $rv = $sth->finish();
+
+                    $sql = "SELECT tag, tens, COUNT(*) AS cnt ".
+                            "FROM tmpage GROUP BY 1,2 ORDER BY 2";
+                    my $sth1 = $dbh->prepare($sql);
+                    $sth1->execute();
+                    while(my $attrv1 = $sth1->fetchrow_hashref()) {
+                        $attrv1->{checked} = JSON::XS::false;
+                        if($attrv1->{cnt} == 1) {
+                            $sql = "SELECT id,name,value FROM tmpage WHERE tens = ?";
+                            my $sth = $dbh->prepare($sql);
+                            $sth->execute($attrv1->{tens});
+                            ($attrv1->{id}, $attrv1->{name}, $attrv1->{value}) = $sth->fetchrow_array();
+                            my $rv = $sth->finish();
+                            $attrv1->{leaf} = JSON::XS::true;
+                            push @{$odata{children}}, $attrv1;
+                        }
+                        else {
+                            $attrv1->{id} = $attrv1->{tag}.$attrv1->{tens};
+                            $attrv1->{value} = $attrv1->{tens};
+                            $attrv1->{expandable} = JSON::XS::true;
+                            $sql = "SELECT id, value, name ".
+                                    "FROM tmpage WHERE tens = ? ORDER BY CAST(value AS integer)";
+                            my $sth2 = $dbh->prepare($sql);
+                            $sth2->execute($attrv1->{tens});
+                            my $i = 1;
+                            while(my $attrv2 = $sth2->fetchrow_hashref()) {
+                                $attrv2->{leaf} = JSON::XS::true;
+                                $attrv2->{checked} = JSON::XS::false;
+                                if($i == 1) {$attrv1->{name}='от '.$attrv2->{name}.'а'}
+                                if($i == 10) {$attrv1->{name}.=' до '.$attrv2->{name}}
+                                push @{$attrv1->{children}}, $attrv2;
+                                $i++;
+                            }
+                            push @{$odata{children}}, $attrv1;
+                            if ( $sth2->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth2->err; $odata{err_msg} = $sth2->errstr; }
+                            else { $odata{success} = JSON::XS::true; }
+                            $rv = $sth2->finish();
+                        }
+                    }
+                    if ( $sth1->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth1->err; $odata{err_msg} = $sth1->errstr; }
+                    else { $odata{success} = JSON::XS::true; }
+                    $rv = $sth1->finish();
+                }
                 else {
                     my $sql = "SELECT v.id, a.tag, v.value, v.name FROM dict.attr_value v ".
                             "INNER JOIN dict.attr a ON v.aid=a.id ".
