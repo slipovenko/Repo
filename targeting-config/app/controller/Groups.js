@@ -181,5 +181,23 @@
 
     onGroupAttrTreeCheckChange: function(node, checked, options) {
         node.cascadeBy(function(n){n.set('checked', checked);} );
+        this.CheckboxTreeParentCheck(node.parentNode, checked);
+    },
+
+    CheckboxTreeParentCheck: function(node, checked) {
+        if(node != null) {
+            var state = checked,
+                length = node.childNodes.length;
+            if(node.get('checked') != null) {
+                if(length > 0) {
+                    for(var i = 0; i < length; i++) {
+                        var child = node.childNodes[i];
+                        state = state && ((child.get('checked') != null)?child.get('checked'):true);
+                    }
+                }
+                node.set('checked', state);
+            }
+            this.CheckboxTreeParentCheck(node.parentNode, state);
+        }
     }
 });
