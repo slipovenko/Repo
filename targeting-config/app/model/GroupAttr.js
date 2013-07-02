@@ -1,13 +1,12 @@
 Ext.define('Targeting.model.GroupAttr', {
-    extend: 'Targeting.model.dict.Attribute',
+    extend: 'Ext.data.Model',
+    fields: ['id', 'gid', 'aid', 'tag', 'value'],
 
     proxy: {
         type: 'ajax',
         api: {
-            create  : 'data/data.pl?obj=group.attr&action=create',
             read: 'data/data.pl?obj=group.attr&action=read',
-            update: 'data/data.pl?obj=group.attr&action=update',
-            destroy : 'data/data.pl?obj=group.attr&action=destroy'
+            update: 'data/data.pl?obj=group.attr&action=update'
         },
         reader: {
             type: 'json',

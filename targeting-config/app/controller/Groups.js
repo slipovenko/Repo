@@ -10,10 +10,13 @@
     },{
         ref: 'appList',
         selector: 'applist'
+    },{
+        ref: 'groupAttrTree',
+        selector: 'groupattrtree'
     }],
 
     views: ['group.List', 'group.Edit', 'group.AttrTree'],
-    stores: ['Apps', 'Groups', 'GroupAttrs'],
+    stores: ['Apps', 'Groups', 'GroupAttrs', 'dict.Attributes'],
 
     init: function() {
 
@@ -85,8 +88,9 @@
                 Ext.getCmp('group-button-upd').setDisabled(false);
                 this.getGroupEdit().setDisabled(false);
                 this.application.fireEvent('groupselected', selection[0]);
-                var attr = Ext.create('Targeting.store.GroupAttrs');
+                var attr = this.getGroupAttrsStore();
                 attr.load({
+                    callback: this.onGroupAttrLoad,
                     params: {
                         id: selection[0].get('id')
                     },
@@ -198,6 +202,22 @@
                 node.set('checked', state);
             }
             this.CheckboxTreeParentCheck(node.parentNode, state);
+        }
+    },
+
+    onGroupAttrLoad: function() {
+        var attr = this.getGroupAttrsStore(),
+            tree = this.getDictAttributesStore(),
+            cnt = attr.count();
+        if(cnt > 0) {
+            for(var i = 0; i < cnt; i++) {
+                var a = attr.getAt(i),
+                    node = tree.getNodeById(a.get('id'));
+                console.log('Process: ' + a.get('id'));
+                node.set('checked', (node.get('checked') != null)?true:null);
+                this.CheckboxTreeParentCheck(node.parentNode, true);
+            }
+            console.log('Attr list loaded: ' + cnt);
         }
     }
 });

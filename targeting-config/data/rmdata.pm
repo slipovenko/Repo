@@ -345,11 +345,14 @@ sub out_groupattr
 
 	switch($self->{_action}) {
 		case 'read' {
-            my $sql = "SELECT g.id AS id, a.id AS aid, g.values FROM ".
-                        "(SELECT id, (each(attr)).key as tag, (each(attr)).value as values ".
-                        "FROM obj.group WHERE id = ?) g ".
-                        "INNER JOIN dict.attr a ".
-                        "USING(tag)";
+            my $sql = "SELECT v.id, gid, aid, tag, value FROM ".
+                    "(SELECT g.id AS gid, a.id AS aid, a.tag, unnest(g.values) AS value FROM ".
+                    "(SELECT id, (each(attr)).key as tag, regexp_split_to_array((each(attr)).value, ';') as values ".
+                    "FROM obj.group WHERE id = ?) g ".
+                    "INNER JOIN dict.attr a ".
+                    "USING(tag)) ga ".
+                    "INNER JOIN dict.attr_value v ".
+                    "USING(aid,value)";
             my $sth = $dbh->prepare($sql);
             $sth->execute($self->{_cgi}->url_param('id'));
             while(my $groupattr = $sth->fetchrow_hashref()) {
