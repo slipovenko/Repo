@@ -34,7 +34,8 @@
                 click: this.onGroupUpdate
             },
             'groupattrtree': {
-                checkchange: this.onGroupAttrTreeCheckChange
+                checkchange: this.onGroupAttrTreeCheckChange,
+                load: this.onGroupAttrLoad
             }
         });
 
@@ -72,22 +73,20 @@
         if(selection[0] != null)
         {
             var store = this.getGroupsStore(),
+                tree = this.getDictAttributesStore(),
                 form = this.getGroupEdit(),
                 record = form.getRecord(),
                 values = form.getValues(),
                 pos = store.indexOf(record);
             if(form.isValid() || (!form.isValid() && pos<0))
             {
-                console.log('Group selected: ' + selection[0].get('id'));
                 // Update only if record is loaded, changes made and record exists in store
                 if(typeof record != 'undefined' && form.isDirty() && pos>=0) { record.set(values); }
+                this.getGroupEdit().setDisabled(true);
                 // Load new record
                 form.loadRecord(selection[0]);
-                // Enable buttons after selection
-                Ext.getCmp('group-button-del').setDisabled(false);
-                Ext.getCmp('group-button-upd').setDisabled(false);
-                this.getGroupEdit().setDisabled(false);
-                this.application.fireEvent('groupselected', selection[0]);
+                // Attr Tree reset and reload
+                tree.getRootNode().cascadeBy(function(n){n.set('checked', (n.get('checked')!= null)?false:null);} );
                 var attr = this.getGroupAttrsStore();
                 attr.load({
                     callback: this.onGroupAttrLoad,
@@ -96,6 +95,11 @@
                     },
                     scope: this
                 });
+                // Enable buttons after selection
+                Ext.getCmp('group-button-del').setDisabled(false);
+                Ext.getCmp('group-button-upd').setDisabled(false);
+                this.getGroupEdit().setDisabled(false);
+                this.application.fireEvent('groupselected', selection[0]);
             }
             else
             {
@@ -212,12 +216,17 @@
         if(cnt > 0) {
             for(var i = 0; i < cnt; i++) {
                 var a = attr.getAt(i),
-                    node = tree.getNodeById(a.get('id'));
-                console.log('Process: ' + a.get('id'));
-                node.set('checked', (node.get('checked') != null)?true:null);
-                this.CheckboxTreeParentCheck(node.parentNode, true);
+                    tag = a.get('tag');
+                if(tree.getNodeById(tag).hasChildNodes())
+                {
+                    var node = tree.getNodeById(a.get('id'));
+                    if(typeof node != 'undefined')
+                    {
+                        node.set('checked', (node.get('checked') != null)?true:null);
+                        this.CheckboxTreeParentCheck(node.parentNode, true);
+                    }
+                }
             }
-            console.log('Attr list loaded: ' + cnt);
         }
     }
 });
