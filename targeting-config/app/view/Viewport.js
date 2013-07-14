@@ -13,7 +13,8 @@ Ext.define('Targeting.view.Viewport', {
         'Targeting.view.ado.Edit',
         'Targeting.view.group.List',
         'Targeting.view.group.Edit',
-        'Targeting.view.group.AttrTree',
+        'Targeting.view.group.AdoList',
+        'Targeting.view.group.AttrTree'
     ],
     
     initComponent: function() {

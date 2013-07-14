@@ -75,6 +75,7 @@ sub out
 		case 'ado' {$out = $self->out_ado();}
 		case 'group' {$out = $self->out_group();}
 		case 'group.attr' {$out = $self->out_groupattr();}
+		case 'group.ado' {$out = $self->out_groupado();}
 		case 'dict.attr' {$out = $self->out_attr();}
 		case 'dict.priority' {$out = $self->out_priority();}
 		case 'dict.type' {$out = $self->out_type();}
@@ -355,6 +356,35 @@ sub out_groupattr
                     "USING(aid,value)";
             my $sth = $dbh->prepare($sql);
             $sth->execute($self->{_cgi}->url_param('id'));
+            while(my $groupattr = $sth->fetchrow_hashref()) {
+                push @{$odata{results}}, $groupattr;
+            }
+            if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+            else { $odata{success} = JSON::XS::true; }
+            my $rv = $sth->finish();
+        }
+		else { $odata{success} = JSON::XS::false; }
+	}
+
+	return JSON::XS->new->encode(\%odata);
+}
+
+sub out_groupado
+{
+	my($self) = @_;
+	my %odata;
+	my @idata = @{$self->{_idata}};
+	my $dbh = $self->{_db};
+
+	switch($self->{_action}) {
+		case 'read' {
+            my $sql = "SELECT a.id, g.gid, g.enable, a.name, a.tid ".
+                    "FROM obj.ado2group g ".
+                    "INNER JOIN obj.ado a ".
+                    "ON g.oid = a.id ".
+                    "WHERE g.gid = ? AND a.deleted = false";
+            my $sth = $dbh->prepare($sql);
+            $sth->execute($self->{_cgi}->url_param('gid'));
             while(my $groupattr = $sth->fetchrow_hashref()) {
                 push @{$odata{results}}, $groupattr;
             }

@@ -11,12 +11,15 @@
         ref: 'appList',
         selector: 'applist'
     },{
+        ref: 'groupAdoList',
+        selector: 'groupadolist'
+    },{
         ref: 'groupAttrTree',
         selector: 'groupattrtree'
     }],
 
-    views: ['group.List', 'group.Edit', 'group.AttrTree'],
-    stores: ['Apps', 'Groups', 'GroupAttrs', 'dict.Attributes'],
+    views: ['group.List', 'group.Edit', 'group.AdoList', 'group.AttrTree'],
+    stores: ['Apps', 'Groups', 'GroupAdos', 'GroupAttrs', 'dict.Attributes'],
 
     init: function() {
 
@@ -92,6 +95,16 @@
                     callback: this.onGroupAttrLoad,
                     params: {
                         id: selection[0].get('id')
+                    },
+                    scope: this
+                });
+                // Ado list for group reload
+                var ado = this.getGroupAdosStore();
+                ado.removeAll();
+                ado.load({
+                    //callback: this.onGroupAttrLoad,
+                    params: {
+                        gid: selection[0].get('id')
                     },
                     scope: this
                 });
