@@ -57,6 +57,12 @@
         this.getGroupList().getSelectionModel().deselectAll();
         Ext.getCmp('group-button-del').setDisabled(true);
 
+        // Clear extended group's parameters
+        this.getGroupAdosStore().removeAll();
+        var tree = this.getDictAttributesStore();
+        tree.getRootNode().cascadeBy(function(n){n.set('checked', (n.get('checked')!= null)?false:null);} );
+
+        // Clear group store & reload
         var store = this.getGroupsStore();
         store.removeAll();
         if(typeof app.get('id') != 'undefined')

@@ -4,6 +4,7 @@ Ext.define('Targeting.view.group.AdoList', {
 
     autoShow: true,
 
+    id: 'group-form-adoedit',
     title: 'Объекты в группе',
     store: 'GroupAdos',
 

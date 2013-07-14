@@ -26,7 +26,7 @@ Ext.define('Targeting.view.Viewport', {
             layout: 'border',
             items: [{
                     xtype: 'grouplist',
-                    height: '33%',
+                    height: '25%',
                     width: '100%',
                     region: 'center',
                     layout: 'fit',
@@ -35,7 +35,7 @@ Ext.define('Targeting.view.Viewport', {
                     id: 'group-form-edit',
                     xtype: 'groupedit',
                     disabled: true,
-                    height: '66%',
+                    height: '75%',
                     width: '100%',
                     region: 'south',
                     split: true,

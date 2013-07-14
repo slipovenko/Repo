@@ -20,9 +20,17 @@ Ext.define('Targeting.view.group.Edit', {
     initComponent: function() {
         this.items = [
             {
-                xtype: 'fieldcontainer',
+                xtype: 'fieldset',
+                title: 'Базовые параметры',
                 layout: 'anchor',
+                collapsible: true,
                 margin: 5,
+                padding: 5,
+                defaults: {
+                    labelAlign: 'right',
+                    labelWidth: 75,
+                    margin: '5 0 5 10'
+                },
                 items: [
                     {
                         xtype: 'textfield',
@@ -57,18 +65,21 @@ Ext.define('Targeting.view.group.Edit', {
             {
                 xtype: 'fieldcontainer',
                 layout: 'hbox',
+                width: '100%',
                 margin: 5,
                 items: [
                     {
+                        id: 'group-form-attredit',
                         xtype: 'groupattrtree',
-                        width: 600,
-                        height: 300,
+                        width: '45%',
+                        height: 'auto',
                         margin: '0 5 0 0',
                         rootVisible: false
                     },{
+                        id: 'group-form-adoedit',
                         xtype: 'groupadolist',
-                        width: 600,
-                        height: 300
+                        width: '45%',
+                        height: 'auto'
                     }
                 ]
             }
