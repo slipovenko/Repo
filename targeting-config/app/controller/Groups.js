@@ -135,17 +135,21 @@
     },
 
     onGroupCreate: function(button, aEvent, aOptions) {
-        var store = this.getGroupsStore();
+        var store = this.getGroupsStore(),
+            tree = this.getDictAttributesStore(),
+            attr = this.getGroupAttrsStore();
         if(store.getNewRecords().length == 0)
         {
-            var newGroup = Ext.create('Targeting.model.Group');
-            newGroup.set('appid', this.getAppList().getSelectionModel().getSelection()[0].get('appid'));
-            newGroup.set('name', 'Новая группа');
-            newGroup.set('priorityid', 1);
-            newGroup.set('weight', 0);
-            newGroup.set('enable', 0);
-            newGroup.set('attr', '');
-            store.insert(0, newGroup);
+            attr.removeAll();
+            tree.getRootNode().cascadeBy(function(n){n.set('checked', (n.get('checked')!= null)?false:null);} );
+            store.insert(0, Ext.create('Targeting.model.Group', {
+                appid: this.getAppList().getSelectionModel().getSelection()[0].get('appid'),
+                name: 'Новая группа',
+                priorityid: 1,
+                weight: 0,
+                enable: 0,
+                attr: []
+            }));
             this.getGroupList().getSelectionModel().select(0);
         }
         else
@@ -191,13 +195,15 @@
         if(form.isValid())
         {
             record.set(values);
+            this.GroupAttrUpdate(record);
             this.getGroupsStore().sync({
                 success: function (b, o) {
                     console.log('Saved group: ' + record.get('name'));
                 },
                 failure: function (b, o) {
                     console.log('ERROR saving group: ' + record.get('name'));
-                }
+                },
+                scope: this
             });
         }
         else
@@ -211,6 +217,7 @@
         this.CheckboxTreeParentCheck(node.parentNode, checked);
     },
 
+    // Check if parent should also be checked
     CheckboxTreeParentCheck: function(node, checked) {
         if(node != null) {
             var state = checked,
@@ -228,6 +235,7 @@
         }
     },
 
+    // Set values
     onGroupAttrLoad: function() {
         var attr = this.getGroupAttrsStore(),
             tree = this.getDictAttributesStore(),
@@ -247,5 +255,30 @@
                 }
             }
         }
+    },
+
+    // Update attr field using data in targeting tree
+    GroupAttrUpdate: function(group) {
+        var root = this.getDictAttributesStore().getRootNode(),
+            attr = [],
+            tmp = {};
+        //fields: ['id', 'gid', 'aid', 'tag', 'value'],
+        root.cascadeBy(
+            function(n){
+                if(n.get('checked') && !n.hasChildNodes()){
+                    var tag = n.get('tag'),
+                        value = n.get('value');
+                    if(typeof(tmp[tag]) == 'undefined') {
+                        tmp[tag] = [];
+                    }
+                    tmp[tag].push(value);
+                };
+            },
+            this
+        );
+        for(var t in tmp) {
+            attr.push({tag: t, values: tmp[t]});
+        }
+        group.set('attr', attr);
     }
 });

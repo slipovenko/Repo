@@ -248,13 +248,14 @@ sub out_group
 	{
 		case 'create'
 			{
-				my $sql = "INSERT INTO obj.group(appid,name,attr,weight,priorityid,enable) VALUES (?, ?, ?, ?, ?, ?) ".
-				    "RETURNING id,appid,name,attr,weight,priorityid,enable";
+				my $sql = "INSERT INTO obj.group(appid,name,attr,weight,priorityid,enable) VALUES (?, ?, ?::hstore, ?, ?, ?) ".
+				    "RETURNING id,appid,name,obj.group_get_attr_as_json(id) AS attr,weight,priorityid,enable";
 				my $errcnt = 0;
 
 				$dbh->begin_work();
 				foreach my $r (@idata)
 				{
+                    $r->{attr} = (ref $r->{attr} eq 'ARRAY')?to_hstore($r->{attr}):'';
                     my $sth = $dbh->prepare($sql);
                     $sth->execute($r->{appid}, $r->{name}, $r->{attr}, $r->{weight}, $r->{priorityid}, $r->{enable});
                     if ( $sth->err )
@@ -267,7 +268,9 @@ sub out_group
                     }
                     else
                     {
-                        push @{$odata{results}}, $sth->fetchrow_hashref();
+                        my $group = $sth->fetchrow_hashref();
+                        $group->{attr} = decode_json($group->{attr});
+                        push @{$odata{results}}, $group;
                     }
                     my $rv = $sth->finish();
                 }
@@ -276,11 +279,13 @@ sub out_group
 			}
 		case 'read'
 			{
-				my $sql = "SELECT id,appid,name,attr,weight,priorityid,enable FROM obj.group WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
+				my $sql = "SELECT id,appid,name,obj.group_get_attr_as_json(id) AS attr,weight,priorityid,enable ".
+				    "FROM obj.group WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
 				my $sth = $dbh->prepare($sql);
 				$sth->execute($self->{_cgi}->url_param('appid'));
 				while(my $group = $sth->fetchrow_hashref())
 				{
+				    $group->{attr} = decode_json($group->{attr});
 					push @{$odata{results}}, $group;
 				}
 				if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
@@ -289,14 +294,15 @@ sub out_group
 			}
 		case 'update'
 			{
-				my $sql = "UPDATE obj.group SET name = ?, weight = ?, priorityid = ?, enable = ? WHERE id = ? AND deleted != true";
+				my $sql = "UPDATE obj.group SET name = ?, attr = attr || ?::hstore, weight = ?, priorityid = ?, enable = ? WHERE id = ? AND deleted != true";
 				my $errcnt = 0;
 
 				$dbh->begin_work();
 				foreach my $r (@idata)
 				{
+                    $r->{attr} = (ref $r->{attr} eq 'ARRAY')?to_hstore($r->{attr}):'';
                     my $sth = $dbh->prepare($sql);
-                    $sth->execute($r->{name}, $r->{weight}, $r->{priorityid}, $r->{enable}, $r->{id});
+                    $sth->execute($r->{name}, $r->{attr}, $r->{weight}, $r->{priorityid}, $r->{enable}, $r->{id});
                     if ( $sth->err )
                     {
                         my %rep = ('id' => $r->{id}, 'name' => $r->{name}, 'weight' => $r->{weight},
@@ -511,10 +517,10 @@ sub out_attr
                     while(my $attrv1 = $sth1->fetchrow_hashref()) {
                         $attrv1->{checked} = JSON::XS::false;
                         if($attrv1->{cnt} == 1) {
-                            $sql = "SELECT id,name,value FROM tmpage WHERE tens = ?";
+                            $sql = "SELECT id, tag, name, value FROM tmpage WHERE tens = ?";
                             my $sth = $dbh->prepare($sql);
                             $sth->execute($attrv1->{tens});
-                            ($attrv1->{id}, $attrv1->{name}, $attrv1->{value}) = $sth->fetchrow_array();
+                            ($attrv1->{id}, $attrv1->{tag}, $attrv1->{name}, $attrv1->{value}) = $sth->fetchrow_array();
                             my $rv = $sth->finish();
                             $attrv1->{leaf} = JSON::XS::true;
                             push @{$odata{children}}, $attrv1;
@@ -523,7 +529,7 @@ sub out_attr
                             $attrv1->{id} = $attrv1->{tag}.$attrv1->{tens};
                             $attrv1->{value} = $attrv1->{tens};
                             $attrv1->{expandable} = JSON::XS::true;
-                            $sql = "SELECT id, value, name ".
+                            $sql = "SELECT id, tag, value, name ".
                                     "FROM tmpage WHERE tens = ? ORDER BY CAST(value AS integer)";
                             my $sth2 = $dbh->prepare($sql);
                             $sth2->execute($attrv1->{tens});
@@ -620,6 +626,17 @@ sub out_type
 sub format
 {
 	return '';
+}
+
+sub to_hstore
+{
+    my $attr = shift;
+    my @t = ();
+    foreach my $a (@{$attr})
+    {
+        push(@t, sprintf('%s=>%s', $a->{tag}, join(';', @{$a->{values}})));
+    }
+    return join(',', @t);
 }
 
 1;

@@ -5,8 +5,7 @@ Ext.define('Targeting.model.GroupAttr', {
     proxy: {
         type: 'ajax',
         api: {
-            read: 'data/data.pl?obj=group.attr&action=read',
-            update: 'data/data.pl?obj=group.attr&action=update'
+            read: 'data/data.pl?obj=group.attr&action=read'
         },
         reader: {
             type: 'json',
