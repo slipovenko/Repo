@@ -1,4 +1,4 @@
-package ModuleRuntime;
+package ReachMedia::ModuleRuntime;
 use strict;
 
 use ZMQ;
@@ -41,7 +41,7 @@ sub run {
 	
 	# send introduce
 	$self->send('introduce');
-	
+
 	# listen socket, in loop
 	while (1) {
 		my $mp = new Data::MessagePack;

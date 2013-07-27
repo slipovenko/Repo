@@ -1,4 +1,4 @@
-package ReachMedia::tgconfig;
+package ReachMedia::TargetingConfig;
 
 use strict;
 use URI;
@@ -8,11 +8,18 @@ use JSON::XS;
 use Data::Dumper;
 use Switch;
 use DBI;
+use ReachMedia::ModuleRuntime;
+
+our @ISA = ("ReachMedia::ModuleRuntime");
+our @INTERFACE = qw(edit);
+
+@PARENT::ISA = @ISA;
 
 sub new
 {
 	my $class = shift;
-	my $self =	{};
+	my (%params) = @_;
+	my $self = $class->PARENT::new(name=>'targeting-config', desc=>'Targeting Configurator', debug=> $params{debug} || 0);
 
     my $host = "127.0.0.1";
     my $port = "5432";
@@ -32,7 +39,43 @@ sub new
     $self->{_json} = JSON::XS->new->latin1;
 
 	bless($self, $class);
+
+	# Define interface functions
+	foreach my $i (@INTERFACE) {
+        $self->{function_table}->{$i} = sub { $self->$i(@_);};
+	}
+
     return $self;
+}
+
+sub edit {
+     my $self = shift;
+     my $params = shift;
+     $self->query($params);
+     return $self->http_adapter();
+ }
+
+sub http
+{
+    my $self = shift;
+    my $response = sprintf("HTTP/1.1 %d %s\n", $self->{_status}, status_message($self->{_status}));
+    foreach my $h (@{$self->{_header}}) {
+        $response .= sprintf("%s: %s\n", $h->[0], $h->[1]);
+    }
+    $response .= "\n";
+    $response .= $self->{_body}->[0];
+    return $response;
+}
+
+sub http_adapter
+{
+    my $self = shift;
+    my @response = ($self->{_status}, []);
+    foreach my $h (@{$self->{_header}}) {
+        push($response[1], $h->[0], $h->[1]);
+    }
+    push(@response, $self->{_body});
+    return \@response;
 }
 
 sub query
@@ -101,29 +144,6 @@ sub query
 	use bytes;
 	push(@{$self->{_header}}, ['Content-Length', length($self->{_body}->[0])]);
 	return $self;
-}
-
-sub http_response
-{
-    my $self = shift;
-    my $response = sprintf("HTTP/1.1 %d %s\n", $self->{_status}, status_message($self->{_status}));
-    foreach my $h (@{$self->{_header}}) {
-        $response .= sprintf("%s: %s\n", $h->[0], $h->[1]);
-    }
-    $response .= "\n";
-    $response .= $self->{_body}->[0];
-    return $response;
-}
-
-sub response
-{
-    my $self = shift;
-    my @response = ($self->{_status}, []);
-    foreach my $h (@{$self->{_header}}) {
-        push($response[1], $h->[0], $h->[1]);
-    }
-    push(@response, $self->{_body});
-    return \@response;
 }
 
 sub query_app
