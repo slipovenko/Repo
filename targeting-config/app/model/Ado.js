@@ -5,10 +5,10 @@ Ext.define('Targeting.model.Ado', {
     proxy: {
         type: 'ajax',
         api: {
-            create  : 'data/data.pl?obj=ado&action=create',
-            read: 'data/data.pl?obj=ado&action=read',
-            update: 'data/data.pl?obj=ado&action=update',
-            destroy : 'data/data.pl?obj=ado&action=destroy'
+            create  : '/call/targeting-config/edit?obj=ado&action=create',
+            read: '/call/targeting-config/edit?obj=ado&action=read',
+            update: '/call/targeting-config/edit?obj=ado&action=update',
+            destroy : '/call/targeting-config/edit?obj=ado&action=destroy'
         },
         reader: {
             type: 'json',

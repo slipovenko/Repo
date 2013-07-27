@@ -5,10 +5,10 @@ Ext.define('Targeting.model.GroupAdo', {
     proxy: {
         type: 'ajax',
         api: {
-            create  : 'data/data.pl?obj=group.ado&action=create',
-            read: 'data/data.pl?obj=group.ado&action=read',
-            update: 'data/data.pl?obj=group.ado&action=update',
-            destroy : 'data/data.pl?obj=group.ado&action=destroy'
+            create  : '/call/targeting-config/edit?obj=group.ado&action=create',
+            read: '/call/targeting-config/edit?obj=group.ado&action=read',
+            update: '/call/targeting-config/edit?obj=group.ado&action=update',
+            destroy : '/call/targeting-config/edit?obj=group.ado&action=destroy'
         },
         reader: {
             type: 'json',

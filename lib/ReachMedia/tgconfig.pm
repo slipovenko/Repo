@@ -1,91 +1,134 @@
-package rmdata;
+package ReachMedia::tgconfig;
 
 use strict;
-use CGI;
+use URI;
+use URI::QueryParam;
+use HTTP::Status qw(:constants status_message);
 use JSON::XS;
 use Data::Dumper;
 use Switch;
 use DBI;
 
-#$dbh->disconnect();
-
 sub new
 {
-	my($class) = shift;
+	my $class = shift;
 	my $self =	{};
-	bless $self, $class;
+
+    my $host = "127.0.0.1";
+    my $port = "5432";
+    my $dbname = "targeting";
+    my $username = "rm";
+    my $password = "rm";
+
+    $self->{_db} = DBI->connect("dbi:Pg:dbname=$dbname;host=$host;port=$port","$username","$password",
+        {PrintError => 0});
+    if (! defined $self->{_db})
+    {
+        $self->{_status} = HTTP_INTERNAL_SERVER_ERROR;
+        $self->{_header} = [['Content-Type', 'text/plain; charset=utf-8']];
+        $self->{_body} = [sprintf("DB Connection error. Error #%s: %s", $DBI::err, $DBI::errstr)];
+        push(@{$self->{_header}},['Content-Length', length($self->{_body}->[0])]);
+    }
+    $self->{_json} = JSON::XS->new->latin1;
+
+	bless($self, $class);
     return $self;
 }
 
-sub init
+sub query
 {
-	my($self) = @_;
-	$self->{_cgi} = CGI->new;
-
-	my $host = "127.0.0.1";
-	my $port = "5432";
-	my $dbname = "targeting";
-	my $username = "rm";
-	my $password = "rm";
-
-	$self->{_db} = DBI->connect("dbi:Pg:dbname=$dbname;host=$host;port=$port","$username","$password", 
-		{PrintError => 0});
-	if ($DBI::err != 0) 
-	{
-		print $DBI::errstr . "\n";
-		exit($DBI::err);
-	}
-}
-
-sub out
-{
-	my($self) = @_;
+	my $self = shift;
+    if(! defined $self->{_db}) { return $self; }
 	my $out;
 	my $header;
 
-	my $obj = $self->{_cgi}->url_param('obj');
+    $self->{_parameters} = shift;
+    $self->{_query} = {};
+    my $url = URI->new('http://'.$self->{_parameters}->{SERVER_NAME}.$self->{_parameters}->{REQUEST_URI});
+    foreach my $p ($url->query_param()) {
+        $self->{_query}->{$p} = $url->query_param($p) if (defined $url->query_param($p));
+    }
+    $self->{_action} = defined($self->{_query}->{action}) ? $self->{_query}->{action} : 'read';
 
-	my $dtype = defined($self->{_cgi}->url_param('dtype')) ? $self->{_cgi}->url_param('dtype') : 'json';
+    $self->{_status} = HTTP_OK;
+    $self->{_header} = [];
+    $self->{_body} = [];
+
+	my $dtype = defined($self->{_query}->{dtype}) ? $self->{_query}->{dtype} : 'json';
 	if($dtype eq 'json')
 	{
-		$header = "Content-type: application/json\n\n";
+		push(@{$self->{_header}}, ['Content-Type', 'application/json; charset=utf-8']);
 		$self->{_idata} = [];
-		if($self->{_cgi}->request_method() eq 'POST')
+		if($self->{_parameters}->{REQUEST_METHOD} eq 'POST')
 		{
-            my $pdata = $self->{_cgi}->param( 'POSTDATA' );
+            my $pdata = $self->{_parameters}->{INPUT_DATA};
             if($pdata =~ /^\s*((\{.*\})|(\[.*\]))\s*$/)
             {
                 my $idata = decode_json($pdata);
                 if(ref $idata eq 'HASH') { push( @{$self->{_idata}}, $idata ); }
                 elsif(ref $idata eq 'ARRAY') { $self->{_idata} = $idata; }
-                else { return $header.'{success:false}';}
+                else {
+                    $self->{_status} = HTTP_BAD_REQUEST;
+                    push(@{$self->{_body}}, '{success:false, err_msg:"Wrong format for POST data"}');
+                    push(@{$self->{_header}}, ['Content-length', length($self->{_body}->[0])]);
+                    return $self;
+                }
             }
 		}
 	}
 	else
 	{
-		$header = "Content-type: text/plain\n\n";
-		return $header.'Unsupported type: $dtype';
+        $self->{_status} = HTTP_BAD_REQUEST;
+        push(@{$self->{_body}}, "Unsupported type: $dtype");
+        push(@{$self->{_header}}, ['Content-Type', 'text/plain; charset=utf-8']);
+        push(@{$self->{_header}}, ['Content-Length', length($self->{_body}->[0])]);
+        return $self;
 	}
 
-    $self->{_action} = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
-	switch($obj)
+	switch($self->{_query}->{obj})
 	{
-		case 'app' {$out = $self->out_app();}
-		case 'ado' {$out = $self->out_ado();}
-		case 'group' {$out = $self->out_group();}
-		case 'group.attr' {$out = $self->out_groupattr();}
-		case 'group.ado' {$out = $self->out_groupado();}
-		case 'dict.attr' {$out = $self->out_attr();}
-		case 'dict.priority' {$out = $self->out_priority();}
-		case 'dict.type' {$out = $self->out_type();}
+		case 'app' {$self->query_app();}
+		case 'ado' {$self->query_ado();}
+		case 'group' {$self->query_group();}
+		case 'group.attr' {$self->query_groupattr();}
+		case 'group.ado' {$self->query_groupado();}
+		case 'dict.attr' {$self->query_attr();}
+		case 'dict.priority' {$self->query_priority();}
+		case 'dict.type' {$self->query_type();}
+		else {$self->{_status} = HTTP_BAD_REQUEST; push(@{$self->{_body}}, '{success:false, err_msg:"Unsupported object type"}');}
 	}
-	return $header.$out;
+
+	use bytes;
+	push(@{$self->{_header}}, ['Content-Length', length($self->{_body}->[0])]);
+	return $self;
 }
 
-sub out_app
+sub http_response
 {
-	my($self) = @_;
+    my $self = shift;
+    my $response = sprintf("HTTP/1.1 %d %s\n", $self->{_status}, status_message($self->{_status}));
+    foreach my $h (@{$self->{_header}}) {
+        $response .= sprintf("%s: %s\n", $h->[0], $h->[1]);
+    }
+    $response .= "\n";
+    $response .= $self->{_body}->[0];
+    return $response;
+}
+
+sub response
+{
+    my $self = shift;
+    my @response = ($self->{_status}, []);
+    foreach my $h (@{$self->{_header}}) {
+        push($response[1], $h->[0], $h->[1]);
+    }
+    push(@response, $self->{_body});
+    return \@response;
+}
+
+sub query_app
+{
+	my $self = shift;
 	my %odata;
 	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
@@ -175,12 +218,12 @@ sub out_app
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_ado
+sub query_ado
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
@@ -196,7 +239,7 @@ sub out_ado
 			{
 				my $sql = "SELECT id,appid,uuid,flink,ilink,tid,name,attr FROM obj.ado WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
 				my $sth = $dbh->prepare($sql);
-				$sth->execute($self->{_cgi}->url_param('appid'));
+				$sth->execute($self->{_query}->{appid});
 				while(my $ado = $sth->fetchrow_hashref())
 				{
 					push @{$odata{results}}, $ado;
@@ -234,12 +277,12 @@ sub out_ado
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_group
+sub query_group
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
@@ -282,7 +325,7 @@ sub out_group
 				my $sql = "SELECT id,appid,name,obj.group_get_attr_as_json(id) AS attr,weight,priorityid,enable ".
 				    "FROM obj.group WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
 				my $sth = $dbh->prepare($sql);
-				$sth->execute($self->{_cgi}->url_param('appid'));
+				$sth->execute($self->{_query}->{appid});
 				while(my $group = $sth->fetchrow_hashref())
 				{
 				    $group->{attr} = decode_json($group->{attr});
@@ -340,10 +383,10 @@ sub out_group
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_groupattr
+sub query_groupattr
 {
 	my($self) = @_;
 	my %odata;
@@ -361,7 +404,7 @@ sub out_groupattr
                     "INNER JOIN dict.attr_value v ".
                     "USING(aid,value)";
             my $sth = $dbh->prepare($sql);
-            $sth->execute($self->{_cgi}->url_param('id'));
+            $sth->execute($self->{_query}->{id});
             while(my $groupattr = $sth->fetchrow_hashref()) {
                 push @{$odata{results}}, $groupattr;
             }
@@ -372,12 +415,12 @@ sub out_groupattr
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_groupado
+sub query_groupado
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
@@ -390,7 +433,7 @@ sub out_groupado
                     "ON g.oid = a.id ".
                     "WHERE g.gid = ? AND a.deleted = false";
             my $sth = $dbh->prepare($sql);
-            $sth->execute($self->{_cgi}->url_param('gid'));
+            $sth->execute($self->{_query}->{gid});
             while(my $groupattr = $sth->fetchrow_hashref()) {
                 push @{$odata{results}}, $groupattr;
             }
@@ -401,15 +444,15 @@ sub out_groupado
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_attr
+sub query_attr
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my $dbh = $self->{_db};
-	my $node = defined($self->{_cgi}->url_param('node'))?$self->{_cgi}->url_param('node'):'root';
+	my $node = defined($self->{_query}->{node}) ? $self->{_query}->{node} : 'root';
 
 	switch($self->{_action}) {
 		case 'read' {
@@ -436,7 +479,7 @@ sub out_attr
                             "WHERE a.tag = ? AND v.deleted != true) g ".
                             "ORDER BY value ASC";
                     my $sth = $dbh->prepare($sql);
-                    $sth->execute($self->{_cgi}->url_param('node'));
+                    $sth->execute($self->{_query}->{node});
                     my $rv = $sth->finish();
 
                     $sql = "SELECT tag,10000000*value1 AS value, name1 AS name, COUNT(*) AS cnt ".
@@ -507,7 +550,7 @@ sub out_attr
                             "WHERE a.tag = ? AND v.deleted != true) g ".
                             "ORDER BY value ASC";
                     my $sth = $dbh->prepare($sql);
-                    $sth->execute($self->{_cgi}->url_param('node'));
+                    $sth->execute($self->{_query}->{node});
                     my $rv = $sth->finish();
 
                     $sql = "SELECT tag, tens, COUNT(*) AS cnt ".
@@ -557,7 +600,7 @@ sub out_attr
                             "INNER JOIN dict.attr a ON v.aid=a.id ".
                             "WHERE a.tag = ? AND v.deleted != true ORDER BY v.id ASC";
                     my $sth = $dbh->prepare($sql);
-                    $sth->execute($self->{_cgi}->url_param('node'));
+                    $sth->execute($self->{_query}->{node});
                     while(my $attrv = $sth->fetchrow_hashref()) {
                         $attrv->{leaf} = JSON::XS::true;
                         $attrv->{checked} = JSON::XS::false;
@@ -572,12 +615,12 @@ sub out_attr
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_priority
+sub query_priority
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my $dbh = $self->{_db};
 
@@ -596,12 +639,12 @@ sub out_priority
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_type
+sub query_type
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my $dbh = $self->{_db};
 
@@ -620,12 +663,7 @@ sub out_type
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
-}
-
-sub format
-{
-	return '';
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
 sub to_hstore

@@ -5,10 +5,10 @@ Ext.define('Targeting.model.Group', {
     proxy: {
         type: 'ajax',
         api: {
-            create  : 'data/data.pl?obj=group&action=create',
-            read: 'data/data.pl?obj=group&action=read',
-            update: 'data/data.pl?obj=group&action=update',
-            destroy : 'data/data.pl?obj=group&action=destroy'
+            create  : '/call/targeting-config/edit?obj=group&action=create',
+            read: '/call/targeting-config/edit?obj=group&action=read',
+            update: '/call/targeting-config/edit?obj=group&action=update',
+            destroy : '/call/targeting-config/edit?obj=group&action=destroy'
         },
         reader: {
             type: 'json',
