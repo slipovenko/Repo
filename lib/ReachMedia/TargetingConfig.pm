@@ -48,12 +48,37 @@ sub new
     return $self;
 }
 
-sub edit {
-     my $self = shift;
-     my $params = shift;
-     $self->query($params);
-     return $self->http_adapter();
- }
+sub edit
+{
+    my $self = shift;
+    my $params = shift;
+    $self->query($params);
+    return $self->http_adapter();
+}
+
+sub load
+{
+    my $self = shift;
+    my $params = shift;
+    my $response = '';
+    my $dbh = $self->{_db};
+
+    my $sql = "UPDATE conf.status SET value=3, utime=now() ".
+        "WHERE value = 2 RETURNING appid";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute();
+    my $t = 0;
+    while(my $conf = $sth->fetchrow_hashref()) {
+        $response .= sprintf("appid: %s .... ", $conf->{appid});
+        # TODO: Load config into Redis
+        $t++;
+        $response .= "Done.\n";
+    }
+    if ( $sth->err ) { $response = sprintf("DB ERROR #%s: '%s'\n", $sth->err, $sth->errstr); }
+    elsif($t==0) { $response = "No tasks.\n"; }
+    my $rv = $sth->finish();
+    return $response;
+}
 
 sub http
 {
@@ -138,6 +163,7 @@ sub query
 		case 'dict.attr' {$self->query_attr();}
 		case 'dict.priority' {$self->query_priority();}
 		case 'dict.type' {$self->query_type();}
+		case 'conf.current' {$self->query_conf();}
 		else {$self->{_status} = HTTP_BAD_REQUEST; push(@{$self->{_body}}, '{success:false, err_msg:"Unsupported object type"}');}
 	}
 
@@ -678,6 +704,75 @@ sub query_type
             }
             if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
             else { $odata{success} = JSON::XS::true; }
+            my $rv = $sth->finish();
+        }
+		else { $odata{success} = JSON::XS::false; }
+	}
+
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
+}
+
+sub query_conf
+{
+    my $self = shift;
+    my %odata;
+    my $dbh = $self->{_db};
+
+	switch($self->{_action}) {
+		case 'read' {
+            my $sql = "SELECT value, cid, date_trunc('second', utime::timestamp) as utime FROM conf.status ".
+                "INNER JOIN obj.app USING(appid) ".
+                "WHERE appid = ? AND deleted != true";
+            my $sth = $dbh->prepare($sql);
+            $sth->execute($self->{_query}->{appid});
+            my $conf = $sth->fetchrow_hashref();
+            if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+            elsif(scalar(keys %{$conf})==0) { $odata{success} = JSON::XS::false; $odata{err_msg} = 'App is not exist'; }
+            else {
+                push @{$odata{results}}, $conf;
+                $odata{success} = JSON::XS::true;
+            }
+            my $rv = $sth->finish();
+        }
+        case 'update' {
+            my $sql = "UPDATE conf.status SET value=1, utime=now() ".
+                "WHERE value = 0 AND appid = ? AND (SELECT deleted FROM obj.app WHERE appid = ?) != true ".
+                "RETURNING value, cid, date_trunc('second', utime::timestamp) as utime";
+            my $sth = $dbh->prepare($sql);
+            $sth->execute($self->{_query}->{appid}, $self->{_query}->{appid});
+            my $conf = $sth->fetchrow_hashref();
+            if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+            elsif(scalar(keys %{$conf})==0) { $odata{success} = JSON::XS::false; $odata{err_msg} = 'App is not exist or configuration is already updated'; }
+            else {
+                $dbh->begin_work();
+
+                $sql = "DELETE FROM conf.current WHERE appid = ? AND cid = ?";
+                my $sthc = $dbh->prepare($sql);
+                $sthc->execute($self->{_query}->{appid}, $conf->{cid}?0:1);
+                my $rvc = $sthc->finish();
+                if ( $sthc->err ) { die($sthc->errstr); }
+
+                $sql = "INSERT INTO conf.current(appid, oid, attr, weight, priorityid, cid) ".
+                    "SELECT a.appid, a.id as oid, g.attr, g.weight, g.priorityid, ? as cid ".
+                    "FROM obj.ado a ".
+                    "INNER JOIN obj.ado2group a2g ON a.id=a2g.oid ".
+                    "INNER JOIN obj.group g ON g.id=a2g.gid ".
+                    "WHERE a2g.enable=true AND g.appid=a.appid AND a.appid = ?";
+                $sthc = $dbh->prepare($sql);
+                $sthc->execute($conf->{cid}?0:1, $self->{_query}->{appid});
+                $rvc = $sthc->finish();
+
+                $sql = "UPDATE conf.status SET value=2, utime=now() ".
+                    "WHERE value = 1 AND appid = ?";
+                $sthc = $dbh->prepare($sql);
+                $sthc->execute($self->{_query}->{appid});
+                $rvc = $sthc->finish();
+
+                $dbh->commit();
+
+                push @{$odata{results}}, $conf;
+                $odata{success} = JSON::XS::true;
+            }
             my $rv = $sth->finish();
         }
 		else { $odata{success} = JSON::XS::false; }

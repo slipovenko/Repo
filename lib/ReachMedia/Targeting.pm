@@ -31,6 +31,6 @@ sub targeting {
      my $params = shift;
      my $response = [];
      return $response;
- }
+}
 
 1;
