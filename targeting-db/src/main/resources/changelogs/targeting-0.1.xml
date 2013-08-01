@@ -265,7 +265,7 @@
                                  baseColumnNames="appid"
                                  referencedTableName="app" referencedTableSchemaName="obj"
                                  referencedColumnNames="appid"
-                                 onDelete="RESTRICT" onUpdate="CASCADE"/>
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
         <addUniqueConstraint constraintName="unq_current_tid_cid"
                              tableName="current" schemaName="conf"
                              columnNames="tid, cid"/>
@@ -540,7 +540,40 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-9" author="svnovikov" context="testdata">
+    <changeSet id="0.1-9" author="svnovikov" context="schemas">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION obj.app_on_insert() RETURNS TRIGGER AS $$
+            BEGIN
+                INSERT INTO conf.status(appid) VALUES (NEW.appid);
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+            ALTER FUNCTION obj.app_on_insert() OWNER TO rm;
+
+            CREATE TRIGGER on_insert
+                AFTER INSERT ON obj.app
+                FOR EACH ROW EXECUTE PROCEDURE obj.app_on_insert();
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION conf.status_on_update() RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.utime = now();
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            ALTER FUNCTION conf.status_on_update() OWNER TO rm;
+
+            CREATE TRIGGER on_update
+                BEFORE UPDATE ON conf.status
+                FOR EACH ROW EXECUTE PROCEDURE conf.status_on_update();
+        </createProcedure>
+        <rollback>
+            DROP FUNCTION obj.app_on_insert() CASCADE;
+            DROP FUNCTION conf.status_on_update() CASCADE;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-10" author="svnovikov" context="testdata">
         <createProcedure>
             CREATE OR REPLACE FUNCTION obj.group_get_attr_as_json(id integer)
               RETURNS json AS
@@ -563,7 +596,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-10" author="svnovikov" context="testdata">
+    <changeSet id="0.1-11" author="svnovikov" context="testdata">
         <sql>
             -- Test objects
             INSERT INTO obj.app
@@ -629,7 +662,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-11" author="svnovikov" context="testdata">
+    <changeSet id="0.1-12" author="svnovikov" context="testdata">
         <sql>
             -- Test configuration
             INSERT INTO conf.current
@@ -649,22 +682,11 @@
             (12, 2147483647, '9:6', '8268db28-4efc-4387-a3a6-414bf5e6badd', 'geo=>10010001;10020001,age=>31;32;33;34;35;36'::hstore, 500, 10, 1),
             (13, 2147483647, '10:6', '2471ccae-c4bf-4db5-834c-0f7168edf7c3', 'geo=>10010001;10020001,age=>31;32;33;34;35;36'::hstore, 500, 10, 1);
             SELECT setval('conf.current_id_seq', 13);
-
-            INSERT INTO conf.status
-            (id, appid, value, utime, cid)
-            VALUES
-            (1, 1001, 0, now(), 0),
-            (2, 1002, 0, now(), 0),
-            (3, 1003, 0, now(), 1),
-            (4, 2147483647, 0, now(), 1);
-            SELECT setval('conf.status_id_seq', 4);
         </sql>
         <rollback>
             <sql>
                 TRUNCATE conf.current CASCADE;
-                TRUNCATE conf.status CASCADE;
                 SELECT setval('conf.current_id_seq', 1);
-                SELECT setval('conf.status_id_seq', 1);
             </sql>
         </rollback>
     </changeSet>

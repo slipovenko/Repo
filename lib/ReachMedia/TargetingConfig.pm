@@ -67,7 +67,7 @@ sub load
 
     my $redis = ReachMedia::DBRedis->new()->connect('localhost', '6379');
 
-    my $sql = "UPDATE conf.status SET value = 3, utime = now() ".
+    my $sql = "UPDATE conf.status SET value = 3 ".
         "WHERE value = 2 RETURNING appid, cid";
     my $sth = $dbh->prepare($sql);
     $sth->execute();
@@ -134,7 +134,7 @@ sub load
         $redis->set("app:$appid:c", "$cid:$index:$tstamp");
         $redis->exec();
 
-        $sql = "UPDATE conf.status SET value = 0, cid = ?,  utime = now() ".
+        $sql = "UPDATE conf.status SET value = 0, cid = ? ".
             "WHERE appid = ?";
         $stha = $dbh->prepare($sql);
         $stha->execute($cid, $appid);
@@ -803,7 +803,7 @@ sub query_conf
             my $rv = $sth->finish();
         }
         case 'update' {
-            my $sql = "UPDATE conf.status SET value=1, utime=now() ".
+            my $sql = "UPDATE conf.status SET value=1 ".
                 "WHERE value = 0 AND appid = ? AND (SELECT deleted FROM obj.app WHERE appid = ?) != true ".
                 "RETURNING value, cid, date_trunc('second', utime::timestamp) as utime";
             my $sth = $dbh->prepare($sql);
@@ -831,7 +831,7 @@ sub query_conf
                 $sthc->execute($conf->{cid}?0:1, $self->{_query}->{appid});
                 $rvc = $sthc->finish();
 
-                $sql = "UPDATE conf.status SET value=2, utime=now() ".
+                $sql = "UPDATE conf.status SET value=2 ".
                     "WHERE value = 1 AND appid = ?";
                 $sthc = $dbh->prepare($sql);
                 $sthc->execute($self->{_query}->{appid});
