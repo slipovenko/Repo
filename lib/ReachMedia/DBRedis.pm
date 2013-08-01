@@ -1,4 +1,4 @@
-package ReachMedia::redis;
+package ReachMedia::DBRedis;
 
 use strict;
 use Redis::hiredis;

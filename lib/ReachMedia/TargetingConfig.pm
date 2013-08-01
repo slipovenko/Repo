@@ -8,6 +8,8 @@ use JSON::XS;
 use Data::Dumper;
 use Switch;
 use DBI;
+use Math::BigInt;
+use ReachMedia::DBRedis;
 use ReachMedia::ModuleRuntime;
 
 our @ISA = ("ReachMedia::ModuleRuntime");
@@ -63,18 +65,70 @@ sub load
     my $response = '';
     my $dbh = $self->{_db};
 
+    my $redis = ReachMedia::DBRedis->new()->connect('localhost', '6379');
+
     my $sql = "UPDATE conf.status SET value=3, utime=now() ".
-        "WHERE value = 2 RETURNING appid";
+        "WHERE value = 2 RETURNING appid, cid";
     my $sth = $dbh->prepare($sql);
     $sth->execute();
     my $t = 0;
     while(my $conf = $sth->fetchrow_hashref()) {
-        $response .= sprintf("appid: %s .... ", $conf->{appid});
-        # TODO: Load config into Redis
+        my @ados;
+        my %values;
+        my $appid = $conf->{appid};
+        my $cid = $conf->{cid}?0:1;
+        $response .= sprintf("appid: %s .... ", $appid);
+
+        $sql = "SELECT oid, weight, p.value AS priority FROM conf.current c ".
+            "INNER JOIN dict.priority p ON c.priorityid=p.id ".
+            "WHERE appid = ? AND cid = ? ".
+            "ORDER BY p.value DESC, weight DESC, oid ASC";
+        my $stha = $dbh->prepare($sql);
+        $stha->execute($appid, $cid);
+        my $index = 0;
+        while(my $a = $stha->fetchrow_hashref()) {
+            push(@ados, [$a->{oid}, sprintf('i:%d,p:%d,w:%d', $index++, $a->{weight}, $a->{priority})]);
+        }
+        if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
+
+        $sql = "SELECT oid, tag, unnest(values) AS value ".
+            "FROM (SELECT oid, (each(attr)).key as tag, regexp_split_to_array((each(attr)).value, ';') as values ".
+            "FROM conf.current WHERE appid = ? AND cid = ?) c ORDER BY 1,2,3 ASC";
+        $stha = $dbh->prepare($sql);
+        $stha->execute($appid, $cid);
+        if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
+        while(my $v = $stha->fetchrow_hashref()) {
+            $values{$v->{tag}}{$v->{value}}{$v->{oid}} = 1;
+        }
+
+        $redis->multi();
+        # Clean up
+        my $prefix = "app:$appid:c:$cid";
+        $redis->del($prefix.':index', $prefix.':oids', $prefix.':bits');
+        # Setting index & object parameters
+        for(my $i=0; $i<$index; $i++) {
+            $redis->rpush($prefix.':index', $ados[$i][0]);
+            $redis->hset($prefix.':oids', $ados[$i][0], $ados[$i][1]);
+        }
+        # Setting bit-masks
+        foreach my $t (keys %values) {
+            foreach my $v (keys %{$values{$t}}) {
+                my $bits = '0b';
+                for(my $i=0; $i<$index; $i++) {
+                    $bits .= exists($values{$t}{$v}{$ados[$i][0]})?'1':'0';
+                }
+                my $b = Math::BigInt->from_bin($bits);
+                $redis->hset($prefix.':bits', "$t:$v", $b);
+            }
+        }
+        # Setting config state
+        $redis->set("app:$appid:c", "$cid:$index");
+        $redis->exec();
+
         $t++;
         $response .= "Done.\n";
     }
-    if ( $sth->err ) { $response = sprintf("DB ERROR #%s: '%s'\n", $sth->err, $sth->errstr); }
+    if ( $sth->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $sth->err, $sth->errstr); $response .= $sql."\n";}
     elsif($t==0) { $response = "No tasks.\n"; }
     my $rv = $sth->finish();
     return $response;
