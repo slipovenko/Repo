@@ -67,7 +67,7 @@ sub load
 
     my $redis = ReachMedia::DBRedis->new()->connect('localhost', '6379');
 
-    my $sql = "UPDATE conf.status SET value=3, utime=now() ".
+    my $sql = "UPDATE conf.status SET value = 3, utime = now() ".
         "WHERE value = 2 RETURNING appid, cid";
     my $sth = $dbh->prepare($sql);
     $sth->execute();
@@ -75,55 +75,69 @@ sub load
     while(my $conf = $sth->fetchrow_hashref()) {
         my @ados;
         my %values;
+        my %tags;
         my $appid = $conf->{appid};
         my $cid = $conf->{cid}?0:1;
         $response .= sprintf("appid: %s .... ", $appid);
 
-        $sql = "SELECT oid, weight, p.value AS priority FROM conf.current c ".
-            "INNER JOIN dict.priority p ON c.priorityid=p.id ".
+        $sql = "SELECT tid, priority, weight, uuid FROM conf.current c ".
             "WHERE appid = ? AND cid = ? ".
-            "ORDER BY p.value DESC, weight DESC, oid ASC";
+            "ORDER BY priority DESC, weight DESC, tid ASC";
         my $stha = $dbh->prepare($sql);
         $stha->execute($appid, $cid);
         my $index = 0;
         while(my $a = $stha->fetchrow_hashref()) {
-            push(@ados, [$a->{oid}, sprintf('i:%d,p:%d,w:%d', $index++, $a->{weight}, $a->{priority})]);
+            push(@ados, [$a->{tid}, sprintf('i:%d,p:%d,w:%d,u:%s', $index++, $a->{weight}, $a->{priority}, $a->{uuid})]);
         }
         if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
 
-        $sql = "SELECT oid, tag, unnest(values) AS value ".
-            "FROM (SELECT oid, (each(attr)).key as tag, regexp_split_to_array((each(attr)).value, ';') as values ".
+        $sql = "SELECT tid, tag, unnest(values) AS value ".
+            "FROM (SELECT tid, (each(attr)).key as tag, regexp_split_to_array((each(attr)).value, ';') as values ".
             "FROM conf.current WHERE appid = ? AND cid = ?) c ORDER BY 1,2,3 ASC";
         $stha = $dbh->prepare($sql);
         $stha->execute($appid, $cid);
         if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
         while(my $v = $stha->fetchrow_hashref()) {
-            $values{$v->{tag}}{$v->{value}}{$v->{oid}} = 1;
+            $values{$v->{tag}}{$v->{value}}{$v->{tid}} = 1;
+            $tags{$v->{tid}}{$v->{tag}} = 1;
         }
 
         $redis->multi();
         # Clean up
         my $prefix = "app:$appid:c:$cid";
-        $redis->del($prefix.':index', $prefix.':oids', $prefix.':bits');
+        my $tstamp = time();
+        $redis->del($prefix.':index', $prefix.':tids', $prefix.':bits');
         # Setting index & object parameters
         for(my $i=0; $i<$index; $i++) {
             $redis->rpush($prefix.':index', $ados[$i][0]);
-            $redis->hset($prefix.':oids', $ados[$i][0], $ados[$i][1]);
+            $redis->hset($prefix.':tids', $ados[$i][0], $ados[$i][1]);
         }
         # Setting bit-masks
         foreach my $t (keys %values) {
+            my $bits = '0b';
+            # Fill in bit-mask for ALL (little-endian)
+            for(my $i=$index-1; $i>=0; $i--) {
+                $bits .= exists($tags{$ados[$i][0]}{$t})?'0':'1';
+            }
+            $redis->hset($prefix.':bits', "$t:ALL", Math::BigInt->from_bin($bits));
+            # List all values
             foreach my $v (keys %{$values{$t}}) {
-                my $bits = '0b';
-                for(my $i=0; $i<$index; $i++) {
+                $bits = '0b';
+                # Fill in bit-mask for value (little-endian)
+                for(my $i=$index-1; $i>=0; $i--) {
                     $bits .= exists($values{$t}{$v}{$ados[$i][0]})?'1':'0';
                 }
-                my $b = Math::BigInt->from_bin($bits);
-                $redis->hset($prefix.':bits', "$t:$v", $b);
+                $redis->hset($prefix.':bits', "$t:$v", Math::BigInt->from_bin($bits));
             }
         }
         # Setting config state
-        $redis->set("app:$appid:c", "$cid:$index");
+        $redis->set("app:$appid:c", "$cid:$index:$tstamp");
         $redis->exec();
+
+        $sql = "UPDATE conf.status SET value = 0, cid = ?,  utime = now() ".
+            "WHERE appid = ?";
+        $stha = $dbh->prepare($sql);
+        $stha->execute($cid, $appid);
 
         $t++;
         $response .= "Done.\n";
@@ -806,11 +820,12 @@ sub query_conf
                 my $rvc = $sthc->finish();
                 if ( $sthc->err ) { die($sthc->errstr); }
 
-                $sql = "INSERT INTO conf.current(appid, oid, attr, weight, priorityid, cid) ".
-                    "SELECT a.appid, a.id as oid, g.attr, g.weight, g.priorityid, ? as cid ".
+                $sql = "INSERT INTO conf.current(appid, tid, uuid, attr, weight, priority, cid) ".
+                    "SELECT a.appid, a.id||':'||g.id AS tid, a.uuid, g.attr, g.weight, p.value AS priority, ? as cid ".
                     "FROM obj.ado a ".
                     "INNER JOIN obj.ado2group a2g ON a.id=a2g.oid ".
                     "INNER JOIN obj.group g ON g.id=a2g.gid ".
+                    "INNER JOIN dict.priority p ON g.priorityid=p.id ".
                     "WHERE a2g.enable=true AND g.appid=a.appid AND a.appid = ?";
                 $sthc = $dbh->prepare($sql);
                 $sthc->execute($conf->{cid}?0:1, $self->{_query}->{appid});
