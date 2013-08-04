@@ -1,6 +1,9 @@
     Ext.define('Targeting.controller.Groups', {
     extend: 'Ext.app.Controller',
-    
+    models: ['obj.App', 'obj.Group', 'obj.GroupAdo', 'obj.GroupAttr', 'dict.Attribute', 'dict.Priority', 'dict.Type'],
+    stores: ['obj.Apps', 'obj.Groups', 'obj.GroupAdos', 'obj.GroupAttrs', 'dict.Attributes', 'dict.Priorities', 'dict.Types'],
+    views: ['group.List', 'group.Edit', 'group.AdoList', 'group.AttrTree'],
+
     refs: [{
         ref: 'groupList',
         selector: 'grouplist'
@@ -17,9 +20,6 @@
         ref: 'groupAttrTree',
         selector: 'groupattrtree'
     }],
-
-    views: ['group.List', 'group.Edit', 'group.AdoList', 'group.AttrTree'],
-    stores: ['Apps', 'Groups', 'GroupAdos', 'GroupAttrs', 'dict.Attributes'],
 
     init: function() {
 
@@ -58,12 +58,12 @@
         Ext.getCmp('group-button-del').setDisabled(true);
 
         // Clear extended group's parameters
-        this.getGroupAdosStore().removeAll();
+        this.getObjGroupAdosStore().removeAll();
         var tree = this.getDictAttributesStore();
         tree.getRootNode().cascadeBy(function(n){n.set('checked', (n.get('checked')!= null)?false:null);} );
 
         // Clear group store & reload
-        var store = this.getGroupsStore();
+        var store = this.getObjGroupsStore();
         store.removeAll();
         if(typeof app.get('id') != 'undefined')
         {
@@ -81,7 +81,7 @@
         // Enable elements after selection
         if(selection[0] != null)
         {
-            var store = this.getGroupsStore(),
+            var store = this.getObjGroupsStore(),
                 tree = this.getDictAttributesStore(),
                 form = this.getGroupEdit(),
                 record = form.getRecord(),
@@ -96,7 +96,7 @@
                 form.loadRecord(selection[0]);
                 // Attr Tree reset and reload
                 tree.getRootNode().cascadeBy(function(n){n.set('checked', (n.get('checked')!= null)?false:null);} );
-                var attr = this.getGroupAttrsStore();
+                var attr = this.getObjGroupAttrsStore();
                 attr.load({
                     callback: this.onGroupAttrLoad,
                     params: {
@@ -105,7 +105,7 @@
                     scope: this
                 });
                 // Ado list for group reload
-                var ado = this.getGroupAdosStore();
+                var ado = this.getObjGroupAdosStore();
                 ado.removeAll();
                 ado.load({
                     //callback: this.onGroupAttrLoad,
@@ -129,20 +129,20 @@
     },
 
     onGroupsLoad: function(groups, request) {
-        var store = this.getGroupsStore();
+        var store = this.getObjGroupsStore();
         store.clearFilter();
         store.sort('name', 'ASC');
     },
 
     onGroupCreate: function(button, aEvent, aOptions) {
-        var store = this.getGroupsStore(),
+        var store = this.getObjGroupsStore(),
             tree = this.getDictAttributesStore(),
-            attr = this.getGroupAttrsStore();
+            attr = this.getObjGroupAttrsStore();
         if(store.getNewRecords().length == 0)
         {
             attr.removeAll();
             tree.getRootNode().cascadeBy(function(n){n.set('checked', (n.get('checked')!= null)?false:null);} );
-            store.insert(0, Ext.create('Targeting.model.Group', {
+            store.insert(0, Ext.create('Targeting.model.obj.Group', {
                 appid: this.getAppList().getSelectionModel().getSelection()[0].get('appid'),
                 name: 'Новая группа',
                 priorityid: 1,
@@ -161,7 +161,7 @@
 
     onGroupDelete: function(button, aEvent, aOptions) {
         var form = this.getGroupEdit(),
-            store = this.getGroupsStore(),
+            store = this.getObjGroupsStore(),
             record = this.getGroupList().getSelectionModel().getSelection()[0],
             pos = store.indexOf(record);
         store.remove(record);
@@ -196,7 +196,7 @@
         {
             record.set(values);
             this.GroupAttrUpdate(record);
-            this.getGroupsStore().sync({
+            this.getObjGroupsStore().sync({
                 success: function (b, o) {
                     console.log('Saved group: ' + record.get('name'));
                 },
@@ -237,7 +237,7 @@
 
     // Set values
     onGroupAttrLoad: function() {
-        var attr = this.getGroupAttrsStore(),
+        var attr = this.getObjGroupAttrsStore(),
             tree = this.getDictAttributesStore(),
             cnt = attr.count();
         if(cnt > 0) {

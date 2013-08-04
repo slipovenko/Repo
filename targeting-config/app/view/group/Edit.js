@@ -2,7 +2,7 @@ Ext.define('Targeting.view.group.Edit', {
     extend: 'Ext.form.Panel',
     alias: 'widget.groupedit',
 
-    store: 'Groups',
+    store: 'obj.Groups',
 
     autoShow: true,
     autoScroll: true,

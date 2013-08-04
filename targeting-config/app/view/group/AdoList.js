@@ -6,7 +6,7 @@ Ext.define('Targeting.view.group.AdoList', {
 
     id: 'group-form-adoedit',
     title: 'Объекты в группе',
-    store: 'GroupAdos',
+    store: 'obj.GroupAdos',
 
     initComponent: function() {
         this.columns = [

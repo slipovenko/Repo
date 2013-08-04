@@ -1,6 +1,9 @@
     Ext.define('Targeting.controller.Ados', {
     extend: 'Ext.app.Controller',
-    
+    models: ['obj.App','obj.Ado'],
+    stores: ['obj.Apps','obj.Ados'],
+    views: ['ado.List', 'ado.Edit'],
+
     refs: [{
         ref: 'adoList',
         selector: 'adolist'
@@ -11,9 +14,6 @@
         ref: 'appList',
         selector: 'applist'
     }],
-
-    views: ['ado.List', 'ado.Edit'],
-    stores: ['Apps','Ados'],
 
     init: function() {
 
@@ -40,7 +40,7 @@
 
         this.getAdoList().getSelectionModel().deselectAll();
 
-        var store = this.getAdosStore();
+        var store = this.getObjAdosStore();
         store.removeAll();
         if(typeof app.get('id') != 'undefined')
         {
@@ -58,7 +58,7 @@
         // Enable elements after selection
         if(selection[0] != null)
         {
-            var store = this.getAdosStore(),
+            var store = this.getObjAdosStore(),
                 form = this.getAdoEdit(),
                 record = form.getRecord(),
                 values = form.getValues(),
@@ -84,7 +84,7 @@
     },
 
     onAdosLoad: function(ados, request) {
-        var store = this.getAdosStore();
+        var store = this.getObjAdosStore();
         store.clearFilter();
         store.sort('name', 'ASC');
     },
@@ -98,7 +98,7 @@
         if(form.isValid())
         {
             record.set(values);
-            this.getAdosStore().sync({
+            this.getObjAdosStore().sync({
                 success: function (b, o) {
                     console.log('Saved object: ' + record.get('name'));
                 },

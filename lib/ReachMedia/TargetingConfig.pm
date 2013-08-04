@@ -1,91 +1,248 @@
-package rmdata;
+package ReachMedia::TargetingConfig;
 
 use strict;
-use CGI;
+use URI;
+use URI::QueryParam;
+use HTTP::Status qw(:constants status_message);
 use JSON::XS;
 use Data::Dumper;
 use Switch;
 use DBI;
+use Math::BigInt;
+use ReachMedia::DBRedis;
+use ReachMedia::ModuleRuntime;
 
-#$dbh->disconnect();
+our @ISA = ("ReachMedia::ModuleRuntime");
+our @INTERFACE = qw(edit);
+
+@PARENT::ISA = @ISA;
 
 sub new
 {
-	my($class) = shift;
-	my $self =	{};
-	bless $self, $class;
+	my $class = shift;
+	my (%params) = @_;
+	my $self = $class->PARENT::new(name=>'targeting-config', desc=>'Targeting Configurator', debug=> $params{debug} || 0);
+
+    my $host = "127.0.0.1";
+    my $port = "5432";
+    my $dbname = "targeting";
+    my $username = "rm";
+    my $password = "rm";
+
+    $self->{_db} = DBI->connect("dbi:Pg:dbname=$dbname;host=$host;port=$port","$username","$password",
+        {PrintError => 0});
+    if (! defined $self->{_db})
+    {
+        $self->{_status} = HTTP_INTERNAL_SERVER_ERROR;
+        $self->{_header} = [['Content-Type', 'text/plain; charset=utf-8']];
+        $self->{_body} = [sprintf("DB Connection error. Error #%s: %s", $DBI::err, $DBI::errstr)];
+        push(@{$self->{_header}},['Content-Length', length($self->{_body}->[0])]);
+    }
+    $self->{_json} = JSON::XS->new->latin1;
+
+	bless($self, $class);
+
+	# Define interface functions
+	foreach my $i (@INTERFACE) {
+        $self->{function_table}->{$i} = sub { $self->$i(@_);};
+	}
+
     return $self;
 }
 
-sub init
+sub edit
 {
-	my($self) = @_;
-	$self->{_cgi} = CGI->new;
-
-	my $host = "127.0.0.1";
-	my $port = "5432";
-	my $dbname = "targeting";
-	my $username = "rm";
-	my $password = "rm";
-
-	$self->{_db} = DBI->connect("dbi:Pg:dbname=$dbname;host=$host;port=$port","$username","$password", 
-		{PrintError => 0});
-	if ($DBI::err != 0) 
-	{
-		print $DBI::errstr . "\n";
-		exit($DBI::err);
-	}
+    my $self = shift;
+    my $params = shift;
+    $self->query($params);
+    return $self->http_adapter();
 }
 
-sub out
+sub load
 {
-	my($self) = @_;
+    my $self = shift;
+    my $params = shift;
+    my $response = '';
+    my $dbh = $self->{_db};
+
+    my $redis = ReachMedia::DBRedis->new()->connect('localhost', '6379');
+
+    my $sql = "UPDATE conf.status SET value = 3 ".
+        "WHERE value = 2 RETURNING appid, cid";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute();
+    my $t = 0;
+    while(my $conf = $sth->fetchrow_hashref()) {
+        my @ados;
+        my %values;
+        my %tags;
+        my $appid = $conf->{appid};
+        my $cid = $conf->{cid}?0:1;
+        $response .= sprintf("appid: %s .... ", $appid);
+
+        $sql = "SELECT tid, priority, weight, uuid FROM conf.current c ".
+            "WHERE appid = ? AND cid = ? ".
+            "ORDER BY priority DESC, weight DESC, tid ASC";
+        my $stha = $dbh->prepare($sql);
+        $stha->execute($appid, $cid);
+        my $index = 0;
+        while(my $a = $stha->fetchrow_hashref()) {
+            push(@ados, [$a->{tid}, sprintf('i:%d,p:%d,w:%d,u:%s', $index++, $a->{weight}, $a->{priority}, $a->{uuid})]);
+        }
+        if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
+
+        $sql = "SELECT tid, tag, unnest(values) AS value ".
+            "FROM (SELECT tid, (each(attr)).key as tag, regexp_split_to_array((each(attr)).value, ';') as values ".
+            "FROM conf.current WHERE appid = ? AND cid = ?) c ORDER BY 1,2,3 ASC";
+        $stha = $dbh->prepare($sql);
+        $stha->execute($appid, $cid);
+        if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
+        while(my $v = $stha->fetchrow_hashref()) {
+            $values{$v->{tag}}{$v->{value}}{$v->{tid}} = 1;
+            $tags{$v->{tid}}{$v->{tag}} = 1;
+        }
+
+        $redis->multi();
+        # Clean up
+        my $prefix = "app:$appid:c:$cid";
+        my $tstamp = time();
+        $redis->del($prefix.':index', $prefix.':tids', $prefix.':bits');
+        # Setting index & object parameters
+        for(my $i=0; $i<$index; $i++) {
+            $redis->rpush($prefix.':index', $ados[$i][0]);
+            $redis->hset($prefix.':tids', $ados[$i][0], $ados[$i][1]);
+        }
+        # Setting bit-masks
+        foreach my $t (keys %values) {
+            my $bits = '0b';
+            # Fill in bit-mask for ALL (little-endian)
+            for(my $i=$index-1; $i>=0; $i--) {
+                $bits .= exists($tags{$ados[$i][0]}{$t})?'0':'1';
+            }
+            $redis->hset($prefix.':bits', "$t:ALL", Math::BigInt->from_bin($bits));
+            # List all values
+            foreach my $v (keys %{$values{$t}}) {
+                $bits = '0b';
+                # Fill in bit-mask for value (little-endian)
+                for(my $i=$index-1; $i>=0; $i--) {
+                    $bits .= exists($values{$t}{$v}{$ados[$i][0]})?'1':'0';
+                }
+                $redis->hset($prefix.':bits', "$t:$v", Math::BigInt->from_bin($bits));
+            }
+        }
+        # Setting config state
+        $redis->set("app:$appid:c", "$cid:$index:$tstamp");
+        $redis->exec();
+
+        $sql = "UPDATE conf.status SET value = 0, cid = ? ".
+            "WHERE appid = ?";
+        $stha = $dbh->prepare($sql);
+        $stha->execute($cid, $appid);
+
+        $t++;
+        $response .= "Done.\n";
+    }
+    if ( $sth->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $sth->err, $sth->errstr); $response .= $sql."\n";}
+    elsif($t==0) { $response = "No tasks.\n"; }
+    my $rv = $sth->finish();
+    return $response;
+}
+
+sub http
+{
+    my $self = shift;
+    my $response = sprintf("HTTP/1.1 %d %s\n", $self->{_status}, status_message($self->{_status}));
+    foreach my $h (@{$self->{_header}}) {
+        $response .= sprintf("%s: %s\n", $h->[0], $h->[1]);
+    }
+    $response .= "\n";
+    $response .= $self->{_body}->[0];
+    return $response;
+}
+
+sub http_adapter
+{
+    my $self = shift;
+    my @response = ($self->{_status}, []);
+    foreach my $h (@{$self->{_header}}) {
+        push($response[1], $h->[0], $h->[1]);
+    }
+    push(@response, $self->{_body});
+    return \@response;
+}
+
+sub query
+{
+	my $self = shift;
+    if(! defined $self->{_db}) { return $self; }
 	my $out;
 	my $header;
 
-	my $obj = $self->{_cgi}->url_param('obj');
+    $self->{_parameters} = shift;
+    $self->{_query} = {};
+    my $url = URI->new('http://'.$self->{_parameters}->{SERVER_NAME}.$self->{_parameters}->{REQUEST_URI});
+    foreach my $p ($url->query_param()) {
+        $self->{_query}->{$p} = $url->query_param($p) if (defined $url->query_param($p));
+    }
+    $self->{_action} = defined($self->{_query}->{action}) ? $self->{_query}->{action} : 'read';
 
-	my $dtype = defined($self->{_cgi}->url_param('dtype')) ? $self->{_cgi}->url_param('dtype') : 'json';
+    $self->{_status} = HTTP_OK;
+    $self->{_header} = [];
+    $self->{_body} = [];
+
+	my $dtype = defined($self->{_query}->{dtype}) ? $self->{_query}->{dtype} : 'json';
 	if($dtype eq 'json')
 	{
-		$header = "Content-type: application/json\n\n";
+		push(@{$self->{_header}}, ['Content-Type', 'application/json; charset=utf-8']);
 		$self->{_idata} = [];
-		if($self->{_cgi}->request_method() eq 'POST')
+		if($self->{_parameters}->{REQUEST_METHOD} eq 'POST')
 		{
-            my $pdata = $self->{_cgi}->param( 'POSTDATA' );
+            my $pdata = $self->{_parameters}->{INPUT_DATA};
             if($pdata =~ /^\s*((\{.*\})|(\[.*\]))\s*$/)
             {
                 my $idata = decode_json($pdata);
                 if(ref $idata eq 'HASH') { push( @{$self->{_idata}}, $idata ); }
                 elsif(ref $idata eq 'ARRAY') { $self->{_idata} = $idata; }
-                else { return $header.'{success:false}';}
+                else {
+                    $self->{_status} = HTTP_BAD_REQUEST;
+                    push(@{$self->{_body}}, '{success:false, err_msg:"Wrong format for POST data"}');
+                    push(@{$self->{_header}}, ['Content-length', length($self->{_body}->[0])]);
+                    return $self;
+                }
             }
 		}
 	}
 	else
 	{
-		$header = "Content-type: text/plain\n\n";
-		return $header.'Unsupported type: $dtype';
+        $self->{_status} = HTTP_BAD_REQUEST;
+        push(@{$self->{_body}}, "Unsupported type: $dtype");
+        push(@{$self->{_header}}, ['Content-Type', 'text/plain; charset=utf-8']);
+        push(@{$self->{_header}}, ['Content-Length', length($self->{_body}->[0])]);
+        return $self;
 	}
 
-    $self->{_action} = defined($self->{_cgi}->url_param('action')) ? $self->{_cgi}->url_param('action') : 'read';
-	switch($obj)
+	switch($self->{_query}->{store})
 	{
-		case 'app' {$out = $self->out_app();}
-		case 'ado' {$out = $self->out_ado();}
-		case 'group' {$out = $self->out_group();}
-		case 'group.attr' {$out = $self->out_groupattr();}
-		case 'group.ado' {$out = $self->out_groupado();}
-		case 'dict.attr' {$out = $self->out_attr();}
-		case 'dict.priority' {$out = $self->out_priority();}
-		case 'dict.type' {$out = $self->out_type();}
+		case 'obj.app' {$self->query_app();}
+		case 'obj.ado' {$self->query_ado();}
+		case 'obj.group' {$self->query_group();}
+		case 'obj.group.attr' {$self->query_groupattr();}
+		case 'obj.group.ado' {$self->query_groupado();}
+		case 'dict.attr' {$self->query_attr();}
+		case 'dict.priority' {$self->query_priority();}
+		case 'dict.type' {$self->query_type();}
+		case 'conf.status' {$self->query_conf();}
+		else {$self->{_status} = HTTP_BAD_REQUEST; push(@{$self->{_body}}, '{success:false, err_msg:"Unsupported object type"}');}
 	}
-	return $header.$out;
+
+	use bytes;
+	push(@{$self->{_header}}, ['Content-Length', length($self->{_body}->[0])]);
+	return $self;
 }
 
-sub out_app
+sub query_app
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
@@ -175,12 +332,12 @@ sub out_app
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_ado
+sub query_ado
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
@@ -196,7 +353,7 @@ sub out_ado
 			{
 				my $sql = "SELECT id,appid,uuid,flink,ilink,tid,name,attr FROM obj.ado WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
 				my $sth = $dbh->prepare($sql);
-				$sth->execute($self->{_cgi}->url_param('appid'));
+				$sth->execute($self->{_query}->{appid});
 				while(my $ado = $sth->fetchrow_hashref())
 				{
 					push @{$odata{results}}, $ado;
@@ -234,12 +391,12 @@ sub out_ado
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_group
+sub query_group
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
@@ -282,7 +439,7 @@ sub out_group
 				my $sql = "SELECT id,appid,name,obj.group_get_attr_as_json(id) AS attr,weight,priorityid,enable ".
 				    "FROM obj.group WHERE appid = ? AND deleted != true ORDER BY 1 ASC";
 				my $sth = $dbh->prepare($sql);
-				$sth->execute($self->{_cgi}->url_param('appid'));
+				$sth->execute($self->{_query}->{appid});
 				while(my $group = $sth->fetchrow_hashref())
 				{
 				    $group->{attr} = decode_json($group->{attr});
@@ -340,10 +497,10 @@ sub out_group
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_groupattr
+sub query_groupattr
 {
 	my($self) = @_;
 	my %odata;
@@ -361,7 +518,7 @@ sub out_groupattr
                     "INNER JOIN dict.attr_value v ".
                     "USING(aid,value)";
             my $sth = $dbh->prepare($sql);
-            $sth->execute($self->{_cgi}->url_param('id'));
+            $sth->execute($self->{_query}->{id});
             while(my $groupattr = $sth->fetchrow_hashref()) {
                 push @{$odata{results}}, $groupattr;
             }
@@ -372,12 +529,12 @@ sub out_groupattr
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_groupado
+sub query_groupado
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my @idata = @{$self->{_idata}};
 	my $dbh = $self->{_db};
@@ -390,7 +547,7 @@ sub out_groupado
                     "ON g.oid = a.id ".
                     "WHERE g.gid = ? AND a.deleted = false";
             my $sth = $dbh->prepare($sql);
-            $sth->execute($self->{_cgi}->url_param('gid'));
+            $sth->execute($self->{_query}->{gid});
             while(my $groupattr = $sth->fetchrow_hashref()) {
                 push @{$odata{results}}, $groupattr;
             }
@@ -401,15 +558,15 @@ sub out_groupado
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_attr
+sub query_attr
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my $dbh = $self->{_db};
-	my $node = defined($self->{_cgi}->url_param('node'))?$self->{_cgi}->url_param('node'):'root';
+	my $node = defined($self->{_query}->{node}) ? $self->{_query}->{node} : 'root';
 
 	switch($self->{_action}) {
 		case 'read' {
@@ -436,7 +593,7 @@ sub out_attr
                             "WHERE a.tag = ? AND v.deleted != true) g ".
                             "ORDER BY value ASC";
                     my $sth = $dbh->prepare($sql);
-                    $sth->execute($self->{_cgi}->url_param('node'));
+                    $sth->execute($self->{_query}->{node});
                     my $rv = $sth->finish();
 
                     $sql = "SELECT tag,10000000*value1 AS value, name1 AS name, COUNT(*) AS cnt ".
@@ -507,7 +664,7 @@ sub out_attr
                             "WHERE a.tag = ? AND v.deleted != true) g ".
                             "ORDER BY value ASC";
                     my $sth = $dbh->prepare($sql);
-                    $sth->execute($self->{_cgi}->url_param('node'));
+                    $sth->execute($self->{_query}->{node});
                     my $rv = $sth->finish();
 
                     $sql = "SELECT tag, tens, COUNT(*) AS cnt ".
@@ -557,7 +714,7 @@ sub out_attr
                             "INNER JOIN dict.attr a ON v.aid=a.id ".
                             "WHERE a.tag = ? AND v.deleted != true ORDER BY v.id ASC";
                     my $sth = $dbh->prepare($sql);
-                    $sth->execute($self->{_cgi}->url_param('node'));
+                    $sth->execute($self->{_query}->{node});
                     while(my $attrv = $sth->fetchrow_hashref()) {
                         $attrv->{leaf} = JSON::XS::true;
                         $attrv->{checked} = JSON::XS::false;
@@ -572,12 +729,12 @@ sub out_attr
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_priority
+sub query_priority
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my $dbh = $self->{_db};
 
@@ -596,12 +753,12 @@ sub out_priority
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub out_type
+sub query_type
 {
-	my($self) = @_;
+	my $self = shift;
 	my %odata;
 	my $dbh = $self->{_db};
 
@@ -620,12 +777,77 @@ sub out_type
 		else { $odata{success} = JSON::XS::false; }
 	}
 
-	return JSON::XS->new->encode(\%odata);
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
-sub format
+sub query_conf
 {
-	return '';
+    my $self = shift;
+    my %odata;
+    my $dbh = $self->{_db};
+
+	switch($self->{_action}) {
+		case 'read' {
+            my $sql = "SELECT appid AS id, value, cid, date_trunc('second', utime::timestamp) as utime FROM conf.status ".
+                "INNER JOIN obj.app USING(appid) ".
+                "WHERE appid = ? AND deleted != true";
+            my $sth = $dbh->prepare($sql);
+            $sth->execute($self->{_query}->{appid});
+            my $conf = $sth->fetchrow_hashref();
+            if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+            elsif(scalar(keys %{$conf})==0) { $odata{success} = JSON::XS::false; $odata{err_msg} = 'App is not exist'; }
+            else {
+                push @{$odata{results}}, $conf;
+                $odata{success} = JSON::XS::true;
+            }
+            my $rv = $sth->finish();
+        }
+        case 'update' {
+            my $sql = "UPDATE conf.status SET value=1 ".
+                "WHERE value = 0 AND appid = ? AND (SELECT deleted FROM obj.app WHERE appid = ?) != true ".
+                "RETURNING appid AS id, value, cid, date_trunc('second', utime::timestamp) as utime";
+            my $sth = $dbh->prepare($sql);
+            $sth->execute($self->{_query}->{appid}, $self->{_query}->{appid});
+            my $conf = $sth->fetchrow_hashref();
+            if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
+            elsif(scalar(keys %{$conf})==0) { $odata{success} = JSON::XS::false; $odata{err_msg} = 'App is not exist or configuration is already updated'; }
+            else {
+                $dbh->begin_work();
+
+                $sql = "DELETE FROM conf.current WHERE appid = ? AND cid = ?";
+                my $sthc = $dbh->prepare($sql);
+                $sthc->execute($self->{_query}->{appid}, $conf->{cid}?0:1);
+                my $rvc = $sthc->finish();
+                if ( $sthc->err ) { die($sthc->errstr); }
+
+                $sql = "INSERT INTO conf.current(appid, tid, uuid, attr, weight, priority, cid) ".
+                    "SELECT a.appid, a.id||':'||g.id AS tid, a.uuid, g.attr, g.weight, p.value AS priority, ? as cid ".
+                    "FROM obj.ado a ".
+                    "INNER JOIN obj.ado2group a2g ON a.id=a2g.oid ".
+                    "INNER JOIN obj.group g ON g.id=a2g.gid ".
+                    "INNER JOIN dict.priority p ON g.priorityid=p.id ".
+                    "WHERE a2g.enable=true AND g.appid=a.appid AND a.appid = ?";
+                $sthc = $dbh->prepare($sql);
+                $sthc->execute($conf->{cid}?0:1, $self->{_query}->{appid});
+                $rvc = $sthc->finish();
+
+                $sql = "UPDATE conf.status SET value=2 ".
+                    "WHERE value = 1 AND appid = ?";
+                $sthc = $dbh->prepare($sql);
+                $sthc->execute($self->{_query}->{appid});
+                $rvc = $sthc->finish();
+
+                $dbh->commit();
+
+                push @{$odata{results}}, $conf;
+                $odata{success} = JSON::XS::true;
+            }
+            my $rv = $sth->finish();
+        }
+		else { $odata{success} = JSON::XS::false; }
+	}
+
+	push(@{$self->{_body}}, $self->{_json}->encode(\%odata));
 }
 
 sub to_hstore

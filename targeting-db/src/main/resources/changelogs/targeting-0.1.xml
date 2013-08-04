@@ -243,14 +243,17 @@
             <column name="appid" type="integer" remarks="ИД приложения">
                 <constraints nullable="false"/>
             </column>
-            <column name="oid" type="integer" remarks="ИД рекламного материала">
+            <column name="tid" type="varchar" remarks="ИД объекта таргетинга">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID" remarks="UUID рекламного материала">
                 <constraints nullable="false"/>
             </column>
             <column name="attr" type="hstore" remarks="Список значений атрибутов таргетинга"/>
             <column name="weight" type="integer" remarks="Статистический вес">
                 <constraints nullable="false"/>
             </column>
-            <column name="priorityid" type="integer" remarks="ИД приоритета">
+            <column name="priority" type="integer" remarks="Приоритет">
                 <constraints nullable="false"/>
             </column>
             <column name="cid" type="smallint" remarks="Текущая версия конфигурации (0 или 1)" defaultValueNumeric="0">
@@ -262,19 +265,10 @@
                                  baseColumnNames="appid"
                                  referencedTableName="app" referencedTableSchemaName="obj"
                                  referencedColumnNames="appid"
-                                 onDelete="RESTRICT" onUpdate="CASCADE"/>
-        <addForeignKeyConstraint constraintName="fk_current_oid"
-                                 baseTableName="current" baseTableSchemaName="conf"
-                                 baseColumnNames="oid"
-                                 referencedTableName="ado" referencedTableSchemaName="obj"
-                                 referencedColumnNames="id"
-                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
-        <addForeignKeyConstraint constraintName="fk_current_priorityid"
-                                 baseTableName="current" baseTableSchemaName="conf"
-                                 baseColumnNames="priorityid"
-                                 referencedTableName="priority" referencedTableSchemaName="dict"
-                                 referencedColumnNames="id"
-                                 onDelete="RESTRICT" onUpdate="RESTRICT"/>
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+        <addUniqueConstraint constraintName="unq_current_tid_cid"
+                             tableName="current" schemaName="conf"
+                             columnNames="tid, cid"/>
     </changeSet>
 
     <changeSet id="0.1-5" author="svnovikov" context="initdata">
@@ -546,7 +540,40 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-9" author="svnovikov" context="testdata">
+    <changeSet id="0.1-9" author="svnovikov" context="schemas">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION obj.app_on_insert() RETURNS TRIGGER AS $$
+            BEGIN
+                INSERT INTO conf.status(appid) VALUES (NEW.appid);
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+            ALTER FUNCTION obj.app_on_insert() OWNER TO rm;
+
+            CREATE TRIGGER on_insert
+                AFTER INSERT ON obj.app
+                FOR EACH ROW EXECUTE PROCEDURE obj.app_on_insert();
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION conf.status_on_update() RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.utime = now();
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            ALTER FUNCTION conf.status_on_update() OWNER TO rm;
+
+            CREATE TRIGGER on_update
+                BEFORE UPDATE ON conf.status
+                FOR EACH ROW EXECUTE PROCEDURE conf.status_on_update();
+        </createProcedure>
+        <rollback>
+            DROP FUNCTION obj.app_on_insert() CASCADE;
+            DROP FUNCTION conf.status_on_update() CASCADE;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0.1-10" author="svnovikov" context="testdata">
         <createProcedure>
             CREATE OR REPLACE FUNCTION obj.group_get_attr_as_json(id integer)
               RETURNS json AS
@@ -569,7 +596,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-10" author="svnovikov" context="testdata">
+    <changeSet id="0.1-11" author="svnovikov" context="testdata">
         <sql>
             -- Test objects
             INSERT INTO obj.app
@@ -635,42 +662,31 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-11" author="svnovikov" context="testdata">
+    <changeSet id="0.1-12" author="svnovikov" context="testdata">
         <sql>
             -- Test configuration
             INSERT INTO conf.current
-            (id, appid, oid, attr, weight, priorityid, cid)
+            (id, appid, tid, uuid, attr, weight, priority, cid)
             VALUES
-            (1, 1001, 1, ''::hstore, 1000, 1, 0),
-            (2, 1001, 1, ''::hstore, 1000, 2, 1),
-            (3, 1001, 2, ''::hstore, 1000, 2, 1),
-            (4, 1003, 4, ''::hstore, 1000, 1, 0),
-            (5, 1003, 4, ''::hstore, 100, 3, 1),
-            (6, 1003, 5, ''::hstore, 100, 3, 1),
-            (7, 1003, 4, 'gen=>1,age=>18;19;20;21'::hstore, 1000, 2, 0),
-            (8, 1003, 4, 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 2, 1),
-            (9, 2147483647, 6, 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 1, 1),
-            (10, 2147483647, 7, 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 1, 1),
-            (11, 2147483647, 8, 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 1, 1),
-            (12, 2147483647, 9, 'geo=>10010001;10020001,age=>31;32;33;34;35;36'::hstore, 500, 1, 1),
-            (13, 2147483647, 10, 'geo=>10010001;10020001,age=>31;32;33;34;35;36'::hstore, 500, 1, 1);
+            (1, 1001, '1:1', 'd2fbf3e5-3cc0-4def-a512-0b87e69138c8', ''::hstore, 1000, 10, 0),
+            (2, 1001, '1:1', 'd2fbf3e5-3cc0-4def-a512-0b87e69138c8', ''::hstore, 1000, 100, 1),
+            (3, 1001, '2:1', '6ee9ccc4-2cb6-45fd-b4ae-c7a09f8faee1', ''::hstore, 1000, 100, 1),
+            (4, 1003, '4:3', '881aef88-b809-419a-864f-0d6ef69a1581', ''::hstore, 1000, 10, 0),
+            (5, 1003, '4:3', '881aef88-b809-419a-864f-0d6ef69a1581', ''::hstore, 100, 1000, 1),
+            (6, 1003, '5:3', '0f04b4c5-d6d4-4291-9f8f-c8224783cb80', ''::hstore, 100, 1000, 1),
+            (7, 1003, '4:4', '881aef88-b809-419a-864f-0d6ef69a1581', 'gen=>1,age=>18;19;20;21'::hstore, 1000, 100, 0),
+            (8, 1003, '4:4', '881aef88-b809-419a-864f-0d6ef69a1581', 'geo=>10010001,age=>21;22;23;24;25'::hstore, 1000, 100, 1),
+            (9, 2147483647, '6:5', 'fd0a6740-d947-4d4d-99f6-ba9edf13f79a', 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 10, 1),
+            (10, 2147483647, '7:5', '74d62fc3-4b87-4f11-862d-14a111af48b7', 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 10, 1),
+            (11, 2147483647, '8:5', 'fcac2d9b-0ada-4bb0-8bfa-e3db5bd791ce', 'geo=>10010001,gen=>1,age=>25;26;27;28;29;30;31;32;33;34;35'::hstore, 1500, 10, 1),
+            (12, 2147483647, '9:6', '8268db28-4efc-4387-a3a6-414bf5e6badd', 'geo=>10010001;10020001,age=>31;32;33;34;35;36'::hstore, 500, 10, 1),
+            (13, 2147483647, '10:6', '2471ccae-c4bf-4db5-834c-0f7168edf7c3', 'geo=>10010001;10020001,age=>31;32;33;34;35;36'::hstore, 500, 10, 1);
             SELECT setval('conf.current_id_seq', 13);
-
-            INSERT INTO conf.status
-            (id, appid, value, utime, cid)
-            VALUES
-            (1, 1001, 0, now(), 0),
-            (2, 1002, 0, now(), 0),
-            (3, 1003, 0, now(), 1),
-            (4, 2147483647, 0, now(), 1);
-            SELECT setval('conf.status_id_seq', 4);
         </sql>
         <rollback>
             <sql>
                 TRUNCATE conf.current CASCADE;
-                TRUNCATE conf.status CASCADE;
                 SELECT setval('conf.current_id_seq', 1);
-                SELECT setval('conf.status_id_seq', 1);
             </sql>
         </rollback>
     </changeSet>

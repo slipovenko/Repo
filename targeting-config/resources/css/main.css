@@ -1,4 +1,5 @@
 .button-add { background-image:url('../images/add.gif') !important; }
 .button-upd { background-image:url('../images/update.gif') !important; }
 .button-del { background-image:url('../images/delete.gif') !important; }
+.button-apply { background-image:url('../images/apply.gif') !important; }
 .x-tree-icon-leaf { display: none !important; }

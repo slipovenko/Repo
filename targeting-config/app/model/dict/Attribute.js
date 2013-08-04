@@ -5,7 +5,7 @@ Ext.define('Targeting.model.dict.Attribute', {
     proxy: {
         type: 'ajax',
         api: {
-            read: 'data/data.pl?obj=dict.attr&action=read'
+            read: '/call/targeting-config/edit?store=dict.attr&action=read'
         },
         reader: {
             type: 'json',

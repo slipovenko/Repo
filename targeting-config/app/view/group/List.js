@@ -2,7 +2,7 @@ Ext.define('Targeting.view.group.List', {
     extend: 'Ext.grid.Panel',
     alias: 'widget.grouplist',
 
-    store: 'Groups',
+    store: 'obj.Groups',
 
     tbar: [
         {

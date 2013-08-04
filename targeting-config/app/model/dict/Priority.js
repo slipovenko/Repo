@@ -5,7 +5,7 @@ Ext.define('Targeting.model.dict.Priority', {
     proxy: {
         type: 'ajax',
         api: {
-            read: 'data/data.pl?obj=dict.priority&action=read'
+            read: '/call/targeting-config/edit?store=dict.priority&action=read'
         },
         reader: {
             type: 'json',

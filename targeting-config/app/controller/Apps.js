@@ -1,7 +1,8 @@
 Ext.define('Targeting.controller.Apps', {
     extend: 'Ext.app.Controller',
-    models: ['App'],
-    stores: ['Apps'],
+    models: ['obj.App', 'conf.Status'],
+    stores: ['obj.Apps', 'conf.Status'],
+    views: [ 'app.List', 'app.Edit' ],
     
     refs: [{
         ref: 'appEdit',
@@ -10,8 +11,6 @@ Ext.define('Targeting.controller.Apps', {
         ref: 'appList',
         selector: 'applist'
     }],
-
-    views: [ 'app.List', 'app.Edit' ],
 
     init: function() {
         this.control({
@@ -27,27 +26,31 @@ Ext.define('Targeting.controller.Apps', {
             },
             'appedit button[action=save]': {
                 click: this.onAppUpdate
+            },
+            'appedit button[action=apply]': {
+                click: this.onConfApply
             }
         });
+        // Update tasks
+        this.runner = new Ext.util.TaskRunner();
+        this.task = null;
     },
 
     onAppListRendered: function() {
-        //console.log('The App panel was rendered');
-        this.getAppsStore().load({
+        this.getObjAppsStore().load({
             callback: this.onAppsLoad,
             scope: this
         });
     },
 
     onAppsLoad: function(apps, request) {
-        //console.log('The App list was loaded');
         this.getAppList().getSelectionModel().select(0);
     },
 
     onAppSelect: function(selModel, selection) {
         if(selection[0] != null)
         {
-            var store = this.getAppsStore(),
+            var store = this.getObjAppsStore(),
                 form = this.getAppEdit(),
                 record = form.getRecord(),
                 values = form.getValues(),
@@ -64,7 +67,14 @@ Ext.define('Targeting.controller.Apps', {
                 var tflag = typeof selection[0].get('id') == 'undefined';
                 Ext.getCmp('group-tab-panel').setDisabled(tflag);
                 Ext.getCmp('ado-tab-panel').setDisabled(tflag);
-                if(tflag){ form.show(); }
+                if(tflag){
+                    form.show();
+                    this.onAppConfStatusLoad(null);
+                }
+                else {
+                    // Load configuration status
+                    this.ConfStatusUpdate(selection[0].get('appid'));
+                }
                 this.application.fireEvent('appselected', selection[0]);
             }
             else
@@ -75,14 +85,59 @@ Ext.define('Targeting.controller.Apps', {
         }
     },
 
+    ConfStatusUpdate: function(appid) {
+        this.getConfStatusStore().load({
+            callback: this.onAppConfStatusLoad,
+            params: {
+                appid: appid
+            },
+            scope: this
+        });
+    },
+
+    onAppConfStatusLoad: function(status, request) {
+        var form = this.getAppEdit(),
+            statusText = 'Состояние: ',
+            utimeText = 'Обновлено: ',
+            buttonDisabled = true;
+        if(this.task != null) { this.task.destroy();}
+        if(status != null && status.length>0) {
+            switch (status[0].get('value')) {
+                case 0: {statusText += 'Загружена'; break;}
+                case 1: {statusText += 'В очереди'; break;}
+                case 2: {statusText += 'Сохранена'; break;}
+                case 3: {statusText += 'Загружается'; break;}
+                default: {statusText += 'Неизвестно';}
+            }
+            utimeText += status[0].get('utime');
+            buttonDisabled = status[0].get('value')>0;
+            this.task = this.runner.newTask({
+                run: function(){
+                    this.ConfStatusUpdate(status[0].get('id'));
+                },
+                interval: 10000,
+                scope: this
+            });
+            this.task.start();
+        }
+        else {
+            statusText += '-';
+            utimeText += '-';
+        }
+        Ext.getCmp('app-text-conf-status').setText(statusText);
+        Ext.getCmp('app-text-conf-utime').setText(utimeText);
+        Ext.getCmp('app-button-conf-apply').setDisabled(buttonDisabled);
+    },
+
     onAppCreate: function(button, aEvent, aOptions) {
-        var store = this.getAppsStore();
+        var store = this.getObjAppsStore();
         if(store.getNewRecords().length == 0)
         {
-            var newApp = Ext.create('Targeting.model.App');
+            var newApp = Ext.create('Targeting.model.obj.App');
             newApp.set('name', 'Новое приложение');
             store.insert(0, newApp);
             this.getAppList().getSelectionModel().select(0);
+            this.onAppConfStatusLoad(null);
         }
         else
         {
@@ -93,7 +148,7 @@ Ext.define('Targeting.controller.Apps', {
 
     onAppDelete: function(button, aEvent, aOptions) {
         var form = this.getAppEdit(),
-            store = this.getAppsStore(),
+            store = this.getObjAppsStore(),
             record = this.getAppList().getSelectionModel().getSelection()[0],
             pos = store.indexOf(record);
         store.remove(record);
@@ -129,7 +184,7 @@ Ext.define('Targeting.controller.Apps', {
         if(form.isValid())
         {
             record.set(values);
-            this.getAppsStore().sync({
+            this.getObjAppsStore().sync({
                 success: function (b, o) {
                     console.log('Saved app: ' + record.get('name'));
                     Ext.getCmp('group-tab-panel').setDisabled(false);
@@ -144,5 +199,22 @@ Ext.define('Targeting.controller.Apps', {
         {
             Ext.Msg.alert('Ошибка','Поля заполнены неверно!');
         }
+    },
+
+    onConfApply: function(button, aEvent, aOptions) {
+        var store = this.getConfStatusStore(),
+            conf = store.getAt(0);
+        conf.setDirty();
+        store.getProxy().extraParams.appid = conf.get('id');
+        store.sync({
+            success: function (b, o) {
+                this.onAppConfStatusLoad(store.getRange(0,0));
+            },
+            failure: function (b, o) {
+                console.log('ERROR updating configuration status');
+                this.onAppConfStatusLoad(null);
+            },
+            scope: this
+        });
     }
 });

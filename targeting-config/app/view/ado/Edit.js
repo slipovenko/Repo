@@ -2,7 +2,7 @@ Ext.define('Targeting.view.ado.Edit', {
     extend: 'Ext.form.Panel',
     alias: 'widget.adoedit',
 
-    store: 'Ados',
+    store: 'obj.Ados',
 
     autoShow: true,
 
