@@ -1,7 +1,7 @@
 Ext.define('Targeting.controller.Apps', {
     extend: 'Ext.app.Controller',
-    models: ['obj.App'],
-    stores: ['obj.Apps'],
+    models: ['obj.App', 'conf.Status'],
+    stores: ['obj.Apps', 'conf.Status'],
     views: [ 'app.List', 'app.Edit' ],
     
     refs: [{
@@ -26,8 +26,14 @@ Ext.define('Targeting.controller.Apps', {
             },
             'appedit button[action=save]': {
                 click: this.onAppUpdate
+            },
+            'appedit button[action=apply]': {
+                click: this.onConfApply
             }
         });
+        // Update tasks
+        this.runner = new Ext.util.TaskRunner();
+        this.task = null;
     },
 
     onAppListRendered: function() {
@@ -61,7 +67,14 @@ Ext.define('Targeting.controller.Apps', {
                 var tflag = typeof selection[0].get('id') == 'undefined';
                 Ext.getCmp('group-tab-panel').setDisabled(tflag);
                 Ext.getCmp('ado-tab-panel').setDisabled(tflag);
-                if(tflag){ form.show(); }
+                if(tflag){
+                    form.show();
+                    this.onAppConfStatusLoad(null);
+                }
+                else {
+                    // Load configuration status
+                    this.ConfStatusUpdate(selection[0].get('appid'));
+                }
                 this.application.fireEvent('appselected', selection[0]);
             }
             else
@@ -72,6 +85,50 @@ Ext.define('Targeting.controller.Apps', {
         }
     },
 
+    ConfStatusUpdate: function(appid) {
+        this.getConfStatusStore().load({
+            callback: this.onAppConfStatusLoad,
+            params: {
+                appid: appid
+            },
+            scope: this
+        });
+    },
+
+    onAppConfStatusLoad: function(status, request) {
+        var form = this.getAppEdit(),
+            statusText = 'Состояние: ',
+            utimeText = 'Обновлено: ',
+            buttonDisabled = true;
+        if(this.task != null) { this.task.destroy();}
+        if(status != null && status.length>0) {
+            switch (status[0].get('value')) {
+                case 0: {statusText += 'Загружена'; break;}
+                case 1: {statusText += 'В очереди'; break;}
+                case 2: {statusText += 'Сохранена'; break;}
+                case 3: {statusText += 'Загружается'; break;}
+                default: {statusText += 'Неизвестно';}
+            }
+            utimeText += status[0].get('utime');
+            buttonDisabled = status[0].get('value')>0;
+            this.task = this.runner.newTask({
+                run: function(){
+                    this.ConfStatusUpdate(status[0].get('id'));
+                },
+                interval: 10000,
+                scope: this
+            });
+            this.task.start();
+        }
+        else {
+            statusText += '-';
+            utimeText += '-';
+        }
+        Ext.getCmp('app-text-conf-status').setText(statusText);
+        Ext.getCmp('app-text-conf-utime').setText(utimeText);
+        Ext.getCmp('app-button-conf-apply').setDisabled(buttonDisabled);
+    },
+
     onAppCreate: function(button, aEvent, aOptions) {
         var store = this.getObjAppsStore();
         if(store.getNewRecords().length == 0)
@@ -80,6 +137,7 @@ Ext.define('Targeting.controller.Apps', {
             newApp.set('name', 'Новое приложение');
             store.insert(0, newApp);
             this.getAppList().getSelectionModel().select(0);
+            this.onAppConfStatusLoad(null);
         }
         else
         {
@@ -141,5 +199,22 @@ Ext.define('Targeting.controller.Apps', {
         {
             Ext.Msg.alert('Ошибка','Поля заполнены неверно!');
         }
+    },
+
+    onConfApply: function(button, aEvent, aOptions) {
+        var store = this.getConfStatusStore(),
+            conf = store.getAt(0);
+        conf.setDirty();
+        store.getProxy().extraParams.appid = conf.get('id');
+        store.sync({
+            success: function (b, o) {
+                this.onAppConfStatusLoad(store.getRange(0,0));
+            },
+            failure: function (b, o) {
+                console.log('ERROR updating configuration status');
+                this.onAppConfStatusLoad(null);
+            },
+            scope: this
+        });
     }
 });

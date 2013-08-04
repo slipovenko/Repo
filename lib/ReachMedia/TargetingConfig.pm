@@ -231,7 +231,7 @@ sub query
 		case 'dict.attr' {$self->query_attr();}
 		case 'dict.priority' {$self->query_priority();}
 		case 'dict.type' {$self->query_type();}
-		case 'conf.current' {$self->query_conf();}
+		case 'conf.status' {$self->query_conf();}
 		else {$self->{_status} = HTTP_BAD_REQUEST; push(@{$self->{_body}}, '{success:false, err_msg:"Unsupported object type"}');}
 	}
 
@@ -788,7 +788,7 @@ sub query_conf
 
 	switch($self->{_action}) {
 		case 'read' {
-            my $sql = "SELECT value, cid, date_trunc('second', utime::timestamp) as utime FROM conf.status ".
+            my $sql = "SELECT appid AS id, value, cid, date_trunc('second', utime::timestamp) as utime FROM conf.status ".
                 "INNER JOIN obj.app USING(appid) ".
                 "WHERE appid = ? AND deleted != true";
             my $sth = $dbh->prepare($sql);
@@ -805,7 +805,7 @@ sub query_conf
         case 'update' {
             my $sql = "UPDATE conf.status SET value=1 ".
                 "WHERE value = 0 AND appid = ? AND (SELECT deleted FROM obj.app WHERE appid = ?) != true ".
-                "RETURNING value, cid, date_trunc('second', utime::timestamp) as utime";
+                "RETURNING appid AS id, value, cid, date_trunc('second', utime::timestamp) as utime";
             my $sth = $dbh->prepare($sql);
             $sth->execute($self->{_query}->{appid}, $self->{_query}->{appid});
             my $conf = $sth->fetchrow_hashref();
