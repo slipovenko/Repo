@@ -221,13 +221,13 @@ sub query
         return $self;
 	}
 
-	switch($self->{_query}->{obj})
+	switch($self->{_query}->{store})
 	{
-		case 'app' {$self->query_app();}
-		case 'ado' {$self->query_ado();}
-		case 'group' {$self->query_group();}
-		case 'group.attr' {$self->query_groupattr();}
-		case 'group.ado' {$self->query_groupado();}
+		case 'obj.app' {$self->query_app();}
+		case 'obj.ado' {$self->query_ado();}
+		case 'obj.group' {$self->query_group();}
+		case 'obj.group.attr' {$self->query_groupattr();}
+		case 'obj.group.ado' {$self->query_groupado();}
 		case 'dict.attr' {$self->query_attr();}
 		case 'dict.priority' {$self->query_priority();}
 		case 'dict.type' {$self->query_type();}

@@ -1,7 +1,8 @@
 Ext.define('Targeting.controller.Apps', {
     extend: 'Ext.app.Controller',
-    models: ['App'],
-    stores: ['Apps'],
+    models: ['obj.App'],
+    stores: ['obj.Apps'],
+    views: [ 'app.List', 'app.Edit' ],
     
     refs: [{
         ref: 'appEdit',
@@ -10,8 +11,6 @@ Ext.define('Targeting.controller.Apps', {
         ref: 'appList',
         selector: 'applist'
     }],
-
-    views: [ 'app.List', 'app.Edit' ],
 
     init: function() {
         this.control({
@@ -32,22 +31,20 @@ Ext.define('Targeting.controller.Apps', {
     },
 
     onAppListRendered: function() {
-        //console.log('The App panel was rendered');
-        this.getAppsStore().load({
+        this.getObjAppsStore().load({
             callback: this.onAppsLoad,
             scope: this
         });
     },
 
     onAppsLoad: function(apps, request) {
-        //console.log('The App list was loaded');
         this.getAppList().getSelectionModel().select(0);
     },
 
     onAppSelect: function(selModel, selection) {
         if(selection[0] != null)
         {
-            var store = this.getAppsStore(),
+            var store = this.getObjAppsStore(),
                 form = this.getAppEdit(),
                 record = form.getRecord(),
                 values = form.getValues(),
@@ -76,10 +73,10 @@ Ext.define('Targeting.controller.Apps', {
     },
 
     onAppCreate: function(button, aEvent, aOptions) {
-        var store = this.getAppsStore();
+        var store = this.getObjAppsStore();
         if(store.getNewRecords().length == 0)
         {
-            var newApp = Ext.create('Targeting.model.App');
+            var newApp = Ext.create('Targeting.model.obj.App');
             newApp.set('name', 'Новое приложение');
             store.insert(0, newApp);
             this.getAppList().getSelectionModel().select(0);
@@ -93,7 +90,7 @@ Ext.define('Targeting.controller.Apps', {
 
     onAppDelete: function(button, aEvent, aOptions) {
         var form = this.getAppEdit(),
-            store = this.getAppsStore(),
+            store = this.getObjAppsStore(),
             record = this.getAppList().getSelectionModel().getSelection()[0],
             pos = store.indexOf(record);
         store.remove(record);
@@ -129,7 +126,7 @@ Ext.define('Targeting.controller.Apps', {
         if(form.isValid())
         {
             record.set(values);
-            this.getAppsStore().sync({
+            this.getObjAppsStore().sync({
                 success: function (b, o) {
                     console.log('Saved app: ' + record.get('name'));
                     Ext.getCmp('group-tab-panel').setDisabled(false);

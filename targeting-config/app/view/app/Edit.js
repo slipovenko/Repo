@@ -2,7 +2,7 @@ Ext.define('Targeting.view.app.Edit', {
     extend: 'Ext.form.Panel',
     alias: 'widget.appedit',
 
-    store: 'Apps',
+    store: 'obj.Apps',
 
     autoShow: true,
     trackResetOnLoad: true,

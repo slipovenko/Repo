@@ -2,7 +2,7 @@ Ext.define('Targeting.view.app.List', {
     extend: 'Ext.grid.Panel',
     alias: 'widget.applist',
 
-    store: 'Apps',
+    store: 'obj.Apps',
 
     id: 'app-list-grid',
     title: 'Список приложений',

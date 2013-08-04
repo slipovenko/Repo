@@ -2,7 +2,7 @@ Ext.define('Targeting.view.ado.List', {
     extend: 'Ext.grid.Panel',
     alias: 'widget.adolist',
 
-    store: 'Ados',
+    store: 'obj.Ados',
 
     initComponent: function() {
         this.columns = [
