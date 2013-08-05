@@ -105,7 +105,7 @@ Ext.define('Targeting.controller.Apps', {
             switch (status[0].get('value')) {
                 case 0: {statusText += 'Загружена'; break;}
                 case 1: {statusText += 'В очереди'; break;}
-                case 2: {statusText += 'Сохранена'; break;}
+                case 2: {statusText += 'Ожидает загрузки'; break;}
                 case 3: {statusText += 'Загружается'; break;}
                 default: {statusText += 'Неизвестно';}
             }
@@ -189,10 +189,12 @@ Ext.define('Targeting.controller.Apps', {
                     console.log('Saved app: ' + record.get('name'));
                     Ext.getCmp('group-tab-panel').setDisabled(false);
                     Ext.getCmp('ado-tab-panel').setDisabled(false);
+                    this.ConfStatusUpdate(record.get('appid'));
                 },
                 failure: function (b, o) {
                     console.log('ERROR saving app: ' + record.get('name'));
-                }
+                },
+                scope: this
             });
         }
         else

@@ -107,22 +107,17 @@ sub load
         my $prefix = "app:$appid:c:$cid";
         my $tstamp = time();
         $redis->del($prefix.':index', $prefix.':tids', $prefix.':bits');
+
         # Setting index & object parameters
         for(my $i=0; $i<$index; $i++) {
             $redis->rpush($prefix.':index', $ados[$i][0]);
             $redis->hset($prefix.':tids', $ados[$i][0], $ados[$i][1]);
         }
+
         # Setting bit-masks
         foreach my $t (keys %values) {
-            my $bits = '0b';
-            # Fill in bit-mask for ALL (little-endian)
-            for(my $i=$index-1; $i>=0; $i--) {
-                $bits .= exists($tags{$ados[$i][0]}{$t})?'0':'1';
-            }
-            $redis->hset($prefix.':bits', "$t:ALL", Math::BigInt->from_bin($bits));
-            # List all values
             foreach my $v (keys %{$values{$t}}) {
-                $bits = '0b';
+                my $bits = '0b';
                 # Fill in bit-mask for value (little-endian)
                 for(my $i=$index-1; $i>=0; $i--) {
                     $bits .= exists($values{$t}{$v}{$ados[$i][0]})?'1':'0';
@@ -130,6 +125,20 @@ sub load
                 $redis->hset($prefix.':bits', "$t:$v", Math::BigInt->from_bin($bits));
             }
         }
+
+        # Fill in bit-mask for ALL (little-endian)
+        $sql = "SELECT tag FROM dict.attr WHERE deleted != true";
+        $stha = $dbh->prepare($sql);
+        $stha->execute();
+        if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
+        while(my $v = $stha->fetchrow_hashref()) {
+            my $bits = '0b';
+            for(my $i=$index-1; $i>=0; $i--) {
+                $bits .= exists($tags{$ados[$i][0]}{$v->{tag}})?'0':'1';
+            }
+            $redis->hset($prefix.':bits', $v->{tag}.":ALL", Math::BigInt->from_bin($bits));
+        }
+
         # Setting config state
         $redis->set("app:$appid:c", "$cid:$index:$tstamp");
         $redis->exec();
