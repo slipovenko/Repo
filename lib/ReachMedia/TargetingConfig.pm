@@ -835,7 +835,7 @@ sub query_conf
                     "INNER JOIN obj.ado2group a2g ON a.id=a2g.oid ".
                     "INNER JOIN obj.group g ON g.id=a2g.gid ".
                     "INNER JOIN dict.priority p ON g.priorityid=p.id ".
-                    "WHERE a2g.enable=true AND g.appid=a.appid AND a.appid = ?";
+                    "WHERE a2g.enable=true AND g.enable=true AND g.deleted!=true AND a.deleted!=true AND g.appid=a.appid AND a.appid = ?";
                 $sthc = $dbh->prepare($sql);
                 $sthc->execute($conf->{cid}?0:1, $self->{_query}->{appid});
                 $rvc = $sthc->finish();
