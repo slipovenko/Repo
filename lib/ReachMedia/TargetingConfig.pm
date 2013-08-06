@@ -85,9 +85,9 @@ sub load
             "ORDER BY priority DESC, weight DESC, tid ASC";
         my $stha = $dbh->prepare($sql);
         $stha->execute($appid, $cid);
-        my $index = 0;
+        my $mlength = 0;
         while(my $a = $stha->fetchrow_hashref()) {
-            push(@ados, [$a->{tid}, sprintf('i:%d,p:%d,w:%d,u:%s', $index++, $a->{weight}, $a->{priority}, $a->{uuid})]);
+            push(@ados, [$a->{tid}, sprintf('i:%d,p:%d,w:%d,u:%s', $mlength++, $a->{weight}, $a->{priority}, $a->{uuid})]);
         }
         if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
 
@@ -109,7 +109,7 @@ sub load
         $redis->del($prefix.':index', $prefix.':tids', $prefix.':bits');
 
         # Setting index & object parameters
-        for(my $i=0; $i<$index; $i++) {
+        for(my $i=0; $i<$mlength; $i++) {
             $redis->rpush($prefix.':index', $ados[$i][0]);
             $redis->hset($prefix.':tids', $ados[$i][0], $ados[$i][1]);
         }
@@ -117,9 +117,9 @@ sub load
         # Setting bit-masks
         foreach my $t (keys %values) {
             foreach my $v (keys %{$values{$t}}) {
-                my $mask = Bit::Vector->new($index);
+                my $mask = Bit::Vector->new($mlength);
                 # Fill in bit-mask for value (little-endian)
-                for(my $i=0; $i<$index; $i++) {
+                for(my $i=0; $i<$mlength; $i++) {
                     $mask->Bit_On($i) if( exists( $values{$t}{$v}{$ados[$i][0]} ) );
                 }
                 $redis->hset($prefix.':bits', "$t:$v", $mask->to_Hex());
@@ -132,15 +132,15 @@ sub load
         $stha->execute();
         if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
         while(my $v = $stha->fetchrow_hashref()) {
-            my $mask = Bit::Vector->new($index);
-            for(my $i=0; $i<$index; $i++) {
+            my $mask = Bit::Vector->new($mlength);
+            for(my $i=0; $i<$mlength; $i++) {
                 $mask->Bit_On($i) if( !exists( $tags{$ados[$i][0]}{$v->{tag}} ) );
             }
             $redis->hset($prefix.':bits', $v->{tag}.":ALL", $mask->to_Hex());
         }
 
         # Setting config state
-        $redis->set("app:$appid:c", "$cid:$index:$tstamp");
+        $redis->set("app:$appid:c", "$cid:$mlength:$tstamp");
         $redis->exec();
 
         $sql = "UPDATE conf.status SET value = 0, cid = ? ".

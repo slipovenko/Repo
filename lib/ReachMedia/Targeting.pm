@@ -32,15 +32,20 @@ sub new
 sub targeting {
     my $self = shift;
     my $params = shift;
-
-    my $prefix = sprintf("app:%s:c", $params->{appid});
-    my ($cid, $mlength, $tstamp) = split(':', $self->{_redis}->get($prefix));
-    $prefix .= ":$cid";
-
     my $conf = {};
-
     my $response = {};
 
+    if(!exists($params->{appid})) {return $response;};
+    if(!exists($params->{amount})) {$params->{amount} = 1;};
+
+    my $prefix = sprintf("app:%s:c", $params->{appid});
+    my $appc = $self->{_redis}->get($prefix);
+    if(!defined($appc)) {return $response;};
+
+    my ($cid, $mlength, $tstamp) = split(':', $appc);
+    if(!defined($cid) || !defined($mlength)) {return $response;};
+
+    $prefix .= ":$cid";
     $conf->{mask} = Bit::Vector->new($mlength);
     $conf->{mask}->Fill();
     foreach my $attr (keys %{$params->{attr}})
