@@ -73,6 +73,7 @@ sub targeting {
         $objects->{$conf->{tids}->{$tid}->{p}}->{$conf->{tids}->{$tid}->{u}} = int($conf->{tids}->{$tid}->{w});
     }
     $conf->{mask} = $conf->{mask}->to_Bin();
+    print Dumper($objects) if($self->{debug});
 
     my @priorities = sort{int($b) <=> int($a)}(keys %{$objects});
     my $p = shift(@priorities);

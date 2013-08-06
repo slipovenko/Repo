@@ -1,7 +1,7 @@
 [
     {
         "appid": 1001,
-        "amount": 1,
+        "amount": 2,
         "attr": {
             "age": [],
             "gen": [1],
@@ -19,7 +19,7 @@
     },
     {
         "appid": 1003,
-        "amount": 2,
+        "amount": 1,
         "attr": {
             "age": [20,21],
             "gen": [1],
@@ -28,10 +28,10 @@
     },
     {
         "appid": 2147483647,
-        "amount": 2,
+        "amount": 3,
         "attr": {
             "age": [31],
-            "gen": [0],
+            "gen": [1],
             "geo": [10010001]
         }
     }

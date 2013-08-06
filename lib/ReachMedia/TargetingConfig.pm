@@ -87,7 +87,7 @@ sub load
         $stha->execute($appid, $cid);
         my $mlength = 0;
         while(my $a = $stha->fetchrow_hashref()) {
-            push(@ados, [$a->{tid}, sprintf('i:%d,p:%d,w:%d,u:%s', $mlength++, $a->{weight}, $a->{priority}, $a->{uuid})]);
+            push(@ados, [$a->{tid}, sprintf('i:%d,p:%d,w:%d,u:%s', $mlength++, $a->{priority}, $a->{weight}, $a->{uuid})]);
         }
         if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
 
@@ -98,8 +98,10 @@ sub load
         $stha->execute($appid, $cid);
         if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
         while(my $v = $stha->fetchrow_hashref()) {
-            $values{$v->{tag}}{$v->{value}}{$v->{tid}} = 1;
-            $tags{$v->{tid}}{$v->{tag}} = 1;
+            if($v->{value} ne '') {
+                $values{$v->{tag}}{$v->{value}}{$v->{tid}} = 1;
+                $tags{$v->{tid}}{$v->{tag}} = 1;
+            }
         }
 
         $redis->multi();
@@ -865,7 +867,7 @@ sub to_hstore
     my @t = ();
     foreach my $a (@{$attr})
     {
-        push(@t, sprintf('%s=>%s', $a->{tag}, join(';', @{$a->{values}})));
+        push(@t, sprintf('"%s"=>"%s"', $a->{tag}, join(';', @{$a->{values}})));
     }
     return join(',', @t);
 }
