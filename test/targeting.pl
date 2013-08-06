@@ -32,6 +32,7 @@ foreach my $t (@{$tests}) {
                 function => 'targeting',
                 parameters => $t);
     printf("<< %s:%s\n", $_, $resp->{body}->{result}->{$_}) foreach sort(keys %{$resp->{body}->{result}});
+    print Dumper($resp->{body}->{result}->{debug}) if($resp->{body}->{result}->{debug});
     print "\n";
 }
 

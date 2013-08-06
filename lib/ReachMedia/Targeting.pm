@@ -2,6 +2,7 @@ package ReachMedia::Targeting;
 
 use strict;
 use Bit::Vector;
+use Data::Dumper;
 use ReachMedia::DBRedis;
 use ReachMedia::ModuleRuntime;
 
@@ -44,12 +45,13 @@ sub targeting {
     $conf->{mask}->Fill();
     foreach my $attr (keys %{$params->{attr}})
     {
-        $conf->{$attr}->{ALL} = $self->{_redis}->hget($prefix.':bits', "$attr:ALL");
-        my $mask = Bit::Vector->new_Dec($mlength, $conf->{$attr}->{ALL});
+        my $all = $self->{_redis}->hget($prefix.':bits', "$attr:ALL");
+        $conf->{$attr}->{ALL} = defined($all)?$all:'0';
+        my $mask = Bit::Vector->new_Hex($mlength, $conf->{$attr}->{ALL});
         foreach my $value (@{$params->{attr}->{$attr}}) {
             my $bits = $self->{_redis}->hget($prefix.':bits', "$attr:$value");
             $conf->{$attr}->{$value} = defined($bits)?$bits:'0';
-            $mask->Or($mask, Bit::Vector->new_Dec($mlength, $conf->{$attr}->{$value}));
+            $mask->Or($mask, Bit::Vector->new_Hex($mlength, $conf->{$attr}->{$value}));
         }
         $conf->{$attr}->{mask} = $mask->to_Bin();
         $conf->{mask}->And($conf->{mask}, $mask);
@@ -81,6 +83,7 @@ sub targeting {
             $response->{$c++} = $u;
         }
     }
+    #print Dumper($conf, $objects) if($self->{debug});
 
     return $response;
 }

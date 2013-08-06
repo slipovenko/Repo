@@ -8,7 +8,7 @@ use JSON::XS;
 use Data::Dumper;
 use Switch;
 use DBI;
-use Math::BigInt;
+use Bit::Vector;
 use ReachMedia::DBRedis;
 use ReachMedia::ModuleRuntime;
 
@@ -117,12 +117,12 @@ sub load
         # Setting bit-masks
         foreach my $t (keys %values) {
             foreach my $v (keys %{$values{$t}}) {
-                my $bits = '0b';
+                my $mask = Bit::Vector->new($index);
                 # Fill in bit-mask for value (little-endian)
-                for(my $i=$index-1; $i>=0; $i--) {
-                    $bits .= exists($values{$t}{$v}{$ados[$i][0]})?'1':'0';
+                for(my $i=0; $i<$index; $i++) {
+                    $mask->Bit_On($i) if( exists( $values{$t}{$v}{$ados[$i][0]} ) );
                 }
-                $redis->hset($prefix.':bits', "$t:$v", Math::BigInt->from_bin($bits));
+                $redis->hset($prefix.':bits', "$t:$v", $mask->to_Hex());
             }
         }
 
@@ -132,11 +132,11 @@ sub load
         $stha->execute();
         if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
         while(my $v = $stha->fetchrow_hashref()) {
-            my $bits = '0b';
-            for(my $i=$index-1; $i>=0; $i--) {
-                $bits .= exists($tags{$ados[$i][0]}{$v->{tag}})?'0':'1';
+            my $mask = Bit::Vector->new($index);
+            for(my $i=0; $i<$index; $i++) {
+                $mask->Bit_On($i) if( !exists( $tags{$ados[$i][0]}{$v->{tag}} ) );
             }
-            $redis->hset($prefix.':bits', $v->{tag}.":ALL", Math::BigInt->from_bin($bits));
+            $redis->hset($prefix.':bits', $v->{tag}.":ALL", $mask->to_Hex());
         }
 
         # Setting config state
