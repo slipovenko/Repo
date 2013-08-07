@@ -54,7 +54,7 @@ Ext.define('Targeting.view.app.Edit', {
             },
             {
                 xtype: 'fieldset',
-                title: 'Состояние конфигурации',
+                title: 'Конфигурация',
                 layout: 'vbox',
                 collapsible: false,
                 margin: 5,

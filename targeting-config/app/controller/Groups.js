@@ -261,6 +261,7 @@
     GroupAttrUpdate: function(group) {
         var root = this.getDictAttributesStore().getRootNode(),
             attr = [],
+            tlist = {},
             tmp = {};
         //fields: ['id', 'gid', 'aid', 'tag', 'value'],
         root.cascadeBy(
@@ -278,7 +279,19 @@
         );
         for(var t in tmp) {
             attr.push({tag: t, values: tmp[t]});
+            tlist[t] = true;
         }
+        // Check if all values unset for tag & send empty value list
+        root.eachChild(
+            function(n){
+                var t = n.get('tag');
+                if(n.hasChildNodes() && (typeof(tlist[t]) == 'undefined')){
+                    attr.push({tag: t, values: []});
+                }
+            },
+            this
+        );
+
         group.set('attr', attr);
     }
 });
