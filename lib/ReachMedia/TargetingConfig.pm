@@ -13,7 +13,7 @@ use ReachMedia::DBRedis;
 use ReachMedia::ModuleRuntime;
 
 our @ISA = ("ReachMedia::ModuleRuntime");
-our @INTERFACE = qw(edit);
+our @INTERFACE = qw(edit insert update delete select status);
 
 @PARENT::ISA = @ISA;
 
@@ -50,6 +50,7 @@ sub new
     return $self;
 }
 
+# Edit command
 sub edit
 {
     my $self = shift;
@@ -58,6 +59,64 @@ sub edit
     return $self->http_adapter();
 }
 
+# Insert command
+sub insert
+{
+    my $self = shift;
+    my $params = shift;
+
+    return {};
+}
+
+# Update command
+sub update
+{
+    my $self = shift;
+    my $params = shift;
+
+    return {};
+}
+
+# Delete command
+sub delete
+{
+    my $self = shift;
+    my $params = shift;
+
+    return {};
+}
+
+# Select command
+sub select
+{
+    my $self = shift;
+    my $params = shift;
+
+    return {};
+}
+
+# Status command
+sub status
+{
+    my $self = shift;
+    my $params = shift;
+    my $status = 0;
+    my $sql = "SELECT value FROM conf.status ".
+        "INNER JOIN obj.app USING(appid) ".
+        "WHERE appid = ? AND deleted != true";
+    my $sth = $self->{_db}->prepare($sql);
+    $sth->execute($params->{appid});
+    my $conf = $sth->fetchrow_hashref();
+    if ( $sth->err ) { $status = 0xFF; }
+    elsif(scalar(keys %{$conf})==0) { $status = 0x7F; }
+    else {
+        $status = $conf->{value};
+    }
+    my $rv = $sth->finish();
+    return $status;
+}
+
+# Function for loading configuration into Redis
 sub load
 {
     my $self = shift;
@@ -159,6 +218,7 @@ sub load
     return $response;
 }
 
+# prepare HTTP-response if serve a direct CGI-call
 sub http
 {
     my $self = shift;
@@ -171,6 +231,7 @@ sub http
     return $response;
 }
 
+# prepare response for call from http-adapter
 sub http_adapter
 {
     my $self = shift;
@@ -182,6 +243,7 @@ sub http_adapter
     return \@response;
 }
 
+# Process CGI-query
 sub query
 {
 	my $self = shift;
