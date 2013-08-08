@@ -232,6 +232,7 @@ sub query
         return $self;
 	}
 
+    if(!exists($self->{_query}->{store})) {$self->{_query}->{store} = '';}
 	switch($self->{_query}->{store})
 	{
 		case 'obj.app' {$self->query_app();}
@@ -243,7 +244,7 @@ sub query
 		case 'dict.priority' {$self->query_priority();}
 		case 'dict.type' {$self->query_type();}
 		case 'conf.status' {$self->query_conf();}
-		else {$self->{_status} = HTTP_BAD_REQUEST; push(@{$self->{_body}}, '{success:false, err_msg:"Unsupported object type"}');}
+		else {$self->{_status} = HTTP_BAD_REQUEST; push(@{$self->{_body}}, '{success:false, err_msg:"Wrong store name"}');}
 	}
 
 	use bytes;
