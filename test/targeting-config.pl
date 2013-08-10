@@ -23,13 +23,17 @@ close FILE;
 
 # Send targeting-config requests
 foreach my $t (@{$tests}) {
-    printf(">> function:%s, app:%d\n", $t->{function}, $t->{parameters}->{appid} );
+    printf(">> function:%s, app:%s\n", $t->{function}, $t->{parameters}->{appid} );
     my $resp = call(
                 sock => $sock,
                 module => 'targeting-config',
                 function => $t->{function},
                 parameters => $t->{parameters});
-    printf("<< result:%s\n", $resp->{body}->{result});
+    my $result = $resp->{body}->{result};
+    if((ref $result eq 'ARRAY') || (ref $result eq 'HASH')) {
+        $result = JSON::XS->new->pretty->encode($result);
+    }
+    printf("<< result:%s\n", $result);
     print "\n";
 }
 

@@ -91,8 +91,16 @@ sub select
 {
     my $self = shift;
     my $params = shift;
-
-    return {};
+    my $response = [];
+    my $sql = "SELECT uuid FROM obj.ado ".
+        "WHERE appid = ? AND deleted != true";
+    my $sth = $self->{_db}->prepare($sql);
+    $sth->execute($params->{appid});
+    while(my $ado = $sth->fetchrow_hashref()) {
+        push(@{$response}, $ado->{uuid});
+    }
+    my $rv = $sth->finish();
+    return $response;
 }
 
 # Status command

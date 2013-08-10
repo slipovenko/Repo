@@ -26,5 +26,33 @@
         {
             "appid": 2147483647
         }
+    },
+    {
+        "function":"select",
+        "parameters":
+        {
+            "appid": 1001
+        }
+    },
+    {
+        "function":"select",
+        "parameters":
+        {
+            "appid": 1002
+        }
+    },
+    {
+        "function":"select",
+        "parameters":
+        {
+            "appid": 1003
+        }
+    },
+    {
+        "function":"select",
+        "parameters":
+        {
+            "appid": 2147483647
+        }
     }
 ]
