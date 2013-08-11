@@ -15,6 +15,7 @@
             CREATE SCHEMA dict;
             CREATE SCHEMA obj;
             CREATE SCHEMA conf;
+            CREATE SCHEMA tmp;
             CREATE EXTENSION "uuid-ossp";
             CREATE EXTENSION "hstore";
         </sql>
@@ -23,6 +24,7 @@
                 DROP SCHEMA dict;
                 DROP SCHEMA obj;
                 DROP SCHEMA conf;
+                DROP SCHEMA tmp;
                 DROP EXTENSION "uuid-ossp";
                 DROP EXTENSION "hstore";
             </sql>
@@ -133,7 +135,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="name" type="varchar" remarks="Имя объекта"/>
-            <column name="attr" type="varchar" remarks="Список значений атрибутов таргетинга"/>
+            <column name="attr" type="hstore" remarks="Список значений атрибутов таргетинга" defaultValue="''::hstore"/>
             <column name="deleted" type="boolean" remarks="Флаг, что объект удален" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
@@ -150,6 +152,9 @@
                                  referencedTableName="type" referencedTableSchemaName="dict"
                                  referencedColumnNames="id"
                                  onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <addUniqueConstraint constraintName="unq_ado_uuid"
+                             tableName="ado" schemaName="obj"
+                             columnNames="uuid"/>
         <createTable tableName="group" schemaName="obj" remarks="Группы рекламных материалов">
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
@@ -272,6 +277,11 @@
     </changeSet>
 
     <changeSet id="0.1-5" author="svnovikov" context="initdata">
+        <insert tableName="type" schemaName="dict">
+            <column name="id" valueNumeric="0"/>
+            <column name="mtype" value="uknown"/>
+            <column name="name" value="Неизвестный"/>
+        </insert>
         <insert tableName="type" schemaName="dict">
             <column name="mtype" value="image"/>
             <column name="name" value="Изображение"/>
@@ -573,7 +583,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-10" author="svnovikov" context="testdata">
+    <changeSet id="0.1-10" author="svnovikov" context="schemas">
         <createProcedure>
             CREATE OR REPLACE FUNCTION obj.group_get_attr_as_json(id integer)
               RETURNS json AS
@@ -596,7 +606,47 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-11" author="svnovikov" context="testdata">
+    <changeSet id="0.1-11" author="svnovikov" context="schemas">
+        <createTable tableName="ado" schemaName="tmp" remarks="Временное хранилище для объектов">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actionid" type="varchar" remarks="ИД запроса">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seqno" type="integer" remarks="Поярдковый номер в последовательности запросов">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID" remarks="UUID объекта">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="flink" type="varchar" remarks="Ссылка на файл объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ilink" type="varchar" remarks="Ссылка на изображение объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tid" type="integer" remarks="ИД типа контента">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar" remarks="Имя объекта"/>
+            <column name="attr" type="hstore" remarks="Список значений атрибутов таргетинга" defaultValue="''::hstore"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_ado_appid"
+                                 baseTableName="ado" baseTableSchemaName="tmp"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="RESTRICT" onUpdate="CASCADE"/>
+        <addUniqueConstraint constraintName="unq_ado_uuid"
+                             tableName="ado" schemaName="tmp"
+                             columnNames="uuid"/>
+    </changeSet>
+
+    <changeSet id="0.1-12" author="svnovikov" context="testdata">
         <sql>
             -- Test objects
             INSERT INTO obj.app
@@ -662,7 +712,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-12" author="svnovikov" context="testdata">
+    <changeSet id="0.1-13" author="svnovikov" context="testdata">
         <sql>
             -- Test configuration
             INSERT INTO conf.current

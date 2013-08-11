@@ -51,6 +51,7 @@ sub run {
 		
 		my $command = exists $cmd->{command} ? $cmd->{command} : undef;
 		die ( "No commands in message!\n" ) unless($command) ;
+		$self->{cmd} = $cmd;
 		
 		switch ($command) {
 			case "ping" {
@@ -76,6 +77,7 @@ sub run {
 			}	
 			
 		}
+		delete($self->{cmd});
 
 	}
 }

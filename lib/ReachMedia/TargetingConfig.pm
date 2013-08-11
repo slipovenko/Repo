@@ -64,8 +64,84 @@ sub insert
 {
     my $self = shift;
     my $params = shift;
+    my $dbh = $self->{_db};
+    my $status = 0;
+    my $types = {};
+    my $sql = "SELECT value FROM conf.status ".
+        "INNER JOIN obj.app USING(appid) ".
+        "WHERE appid = ? AND deleted != true";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute($params->{appid});
+    if(my $status = $sth->fetchrow_hashref()) {
+        if($status->{value} > 0) { return 0x01; }
+    }
+    else { return 0x7F; }
+    my $rv = $sth->finish();
 
-    return {};
+    $sql = "SELECT id, mtype FROM dict.type WHERE deleted != true";
+    $sth = $dbh->prepare($sql);
+    $sth->execute();
+    while(my $type = $sth->fetchrow_hashref()) {
+        $types->{$type->{mtype}} = $type->{id};
+    }
+    $rv = $sth->finish();
+
+    $sql = 'INSERT INTO tmp.ado '.
+        '(appid, actionid, seqno, uuid, flink, ilink, tid, name, attr) '.
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::hstore)';
+    $dbh->begin_work();
+    foreach my $uuid (keys %{$params->{objects}}) {
+        my $object = $params->{objects}->{$uuid};
+        my @attr = ();
+        if(exists($object->{attr}) && (ref $object->{attr} eq 'HASH')) {
+            foreach my $t (keys %{$object->{attr}}) {
+                push(@attr, sprintf('%s=>%s', $t, join(';', @{$object->{attr}->{$t}})));
+            }
+        }
+        $sth = $dbh->prepare($sql);
+        $sth->execute(  $params->{appid},
+                        $self->{cmd}->{actionid},
+                        exists($self->{cmd}->{seqno})?$self->{cmd}->{seqno}:0,
+                        $uuid,
+                        $object->{link},
+                        $object->{img},
+                        exists($object->{mtype})?$types->{$object->{mtype}}:0,
+                        exists($object->{name})?$object->{name}:'',
+                        join(',', @attr));
+        if ( $sth->err ) {
+            printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
+            $status = 0xFF;
+            $status = 0x03 if $sth->state eq '23505';   # DUPLICATED UUID
+            $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
+            return $status;
+        }
+        $rv = $sth->finish();
+    }
+    if($status) {$dbh->rollback();}
+    else {$dbh->commit();}
+
+    $sql = 'INSERT INTO obj.ado (appid, uuid, flink, ilink, tid, name, attr) '.
+        'SELECT appid, uuid, flink, ilink, tid, name, attr FROM tmp.ado WHERE actionid = ?';
+    $sth = $dbh->prepare($sql);
+    $sth->execute($self->{cmd}->{actionid});
+    if ( $sth->err ) {
+        printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
+        $status = 0xFF;
+        $status = 0x03 if $sth->state eq '23505';   # DUPLICATED UUID
+        $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
+    }
+    $rv = $sth->finish();
+
+    $sql = 'DELETE FROM tmp.ado WHERE actionid = ?';
+    $sth = $dbh->prepare($sql);
+    $sth->execute($self->{cmd}->{actionid});
+    if ( $sth->err ) {
+        printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
+        $status = 0xFF;
+    }
+    $rv = $sth->finish();
+
+    return $status;
 }
 
 # Update command
