@@ -181,6 +181,81 @@
         }
     },
     {
+        "actionid":"1000000",
+        "function":"insert",
+        "parameters":
+        {
+            "appid": 1001,
+            "objects":
+            {
+                "aeb30a54-4096-48fa-88a3-25c75aabdd30":
+                {
+                    "name": "Пакет #1, SWF #1",
+                    "img": "http://test.ru/flashaeb30a54.jpg",
+                    "link": "http://test.ru/flashaeb30a54.swf",
+                    "mtype": "swf"
+                },
+                "8e661aef-b9c2-4f1c-8aa6-bf4ecf7f2183":
+                {
+                    "name": "Пакет #1, SWF #2",
+                    "img": "http://test.ru/flash8e661aef.jpg",
+                    "link": "http://test.ru/flash8e661aef.swf",
+                    "mtype": "swf"
+                }
+            }
+        },
+        "sequence": true,
+        "seqno": 1
+    },
+    {
+        "actionid":"1000000",
+        "function":"insert",
+        "parameters":
+        {
+            "appid": 1001,
+            "objects":
+            {
+                "05ca4ad3-ca91-457c-ae02-bb4f69977ed9":
+                {
+                    "name": "Пакет #2, SWF #1",
+                    "img": "http://test.ru/flash05ca4ad3.jpg",
+                    "link": "http://test.ru/flash05ca4ad3.swf",
+                    "mtype": "swf"
+                },
+                "086ecac0-7f9d-4664-86cf-aa3803b846a5":
+                {
+                    "name": "Пакет #2, SWF #2",
+                    "img": "http://test.ru/flash086ecac0.jpg",
+                    "link": "http://test.ru/flash086ecac0.swf",
+                    "mtype": "swf"
+                }
+            }
+        },
+        "sequence": true,
+        "seqno": 2
+    },
+    {
+        "actionid":"1000000",
+        "function":"insert",
+        "parameters":
+        {
+            "appid": 1001,
+            "complete": 1,
+            "objects":
+            {
+                "ed64adf8-9414-4e6d-a750-c4efcbf202ac":
+                {
+                    "name": "Пакет #3, SWF #1",
+                    "img": "http://test.ru/flashed64adf8.jpg",
+                    "link": "http://test.ru/flashed64adf8.swf",
+                    "mtype": "swf"
+                }
+            }
+        },
+        "sequence": true,
+        "seqno": 3
+    },
+    {
         "function":"update",
         "parameters":
         {

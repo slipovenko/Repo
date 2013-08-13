@@ -28,7 +28,11 @@ foreach my $t (@{$tests}) {
                 sock => $sock,
                 module => 'targeting-config',
                 function => $t->{function},
-                parameters => $t->{parameters});
+                parameters => $t->{parameters},
+                sequence => exists($t->{sequence}) ? 1 : 0,
+                seqno => (exists($t->{sequence})&&exists($t->{seqno})) ? $t->{seqno} : 0,
+                actionid => exists($t->{actionid}) ? $t->{actionid} : time().$$
+                );
     my $result = $resp->{body}->{result};
     if((ref $result eq 'ARRAY') || (ref $result eq 'HASH')) {
         $result = JSON::XS->new->pretty->encode($result);
@@ -47,9 +51,11 @@ sub call {
 		"body" => {
 			module => $opt{module},
 			function => $opt{function},
-			parameters => $opt{parameters}
+			parameters => $opt{parameters},
+			sequence => $opt{sequence},
+			seqno => $opt{seqno}
 		},
-		"actionid" => time().$$
+		"actionid" => $opt{actionid}
 	} ) );
 
 	$opt{sock}->sendmsg( $msg );
