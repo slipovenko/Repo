@@ -272,5 +272,56 @@
                 }
             }
         }
+    },
+    {
+        "function":"delete",
+        "parameters":
+        {
+            "appid": 2147483647,
+            "complete": 1,
+            "objects":
+            [
+                "2c56a6e1-87af-40e7-af3c-da670e453b8e",
+                "df6f5242-f3cf-45f4-a2c3-32f5d5687ca2"
+            ]
+        }
+    },
+    {
+        "function":"delete",
+        "parameters":
+        {
+            "appid": 1002,
+            "complete": 1,
+            "objects":
+            [
+                "9837c06b-a335-4958-a321-c99db37c6d63",
+                "33d49573-acb6-4411-82d6-48bce202ec52",
+                "01aeb7c0-d9cb-44d0-bece-2306265d2a5f"
+            ]
+        }
+    },
+    {
+        "function":"delete",
+        "parameters":
+        {
+            "appid": 1001,
+            "complete": 1,
+            "objects":
+            [
+                "6ee9ccc4-2cb6-45fd-b4ae-c7a09f8faee1"
+            ]
+        }
+    },
+    {
+        "function":"delete",
+        "parameters":
+        {
+            "appid": 1001,
+            "complete": 1,
+            "objects":
+            [
+                "9837c06b-a335-4958-a321-c99db37c6d63"
+            ]
+        }
     }
 ]

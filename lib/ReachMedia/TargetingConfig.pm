@@ -204,7 +204,6 @@ sub update
             if ( $sth->err ) {
                 db_error($sth);
                 $status = 0x80;
-                $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
             }
             else {
                 while(my $object = $sth->fetchrow_hashref()) {
@@ -250,8 +249,86 @@ sub delete
 {
     my $self = shift;
     my $params = shift;
+    my $dbh = $self->{_db};
+    my $actionid = $self->{cmd}->{actionid};
+    my $seqno = exists($self->{cmd}->{seqno})?$self->{cmd}->{seqno}:0;
 
-    return {};
+    # Check configuration status
+    my $status = $self->get_conf_status($params->{appid});
+    if(!defined($status)) { return 0x7F; }
+    if($status > 0) { return 0x01; }
+
+    # Load types dictionary
+    my $types = $self->get_dict_type();
+    if(!defined($types)) { return 0x81; }
+
+    # Get transaction ID if in sequence or get new
+    $dbh->begin_work();
+    my $transid = $self->get_transaction_id($params->{appid}, $actionid, $seqno, 'delete');
+    if(!defined($transid)) { return 0x82; }
+
+    # Save temporary data
+    my $sql = 'INSERT INTO tmp.ado_delete(transid, seqno, uuid) VALUES (?, ?, ?)';
+    foreach my $uuid (@{$params->{objects}}) {
+        my $sth = $dbh->prepare($sql);
+        $sth->execute(  $transid,
+                        $seqno,
+                        $uuid);
+        if ( $sth->err ) {
+            db_error($sth);
+            $status = 0x80;
+            $status = 0x03 if $sth->state eq '23505';   # DUPLICATED UUID
+            $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
+        }
+        $sth->finish();
+    }
+    if($status) {$dbh->rollback();}
+    else {$dbh->commit();}
+
+    # End of operation
+    if($params->{complete}) {
+        my @objects;
+        if ($status == 0) {
+            $sql = 'SELECT appid, uuid FROM tmp.ado_delete a '.
+                'INNER JOIN tmp.transactions t ON t.id=a.transid '.
+                'WHERE transid = ?';
+            my $sth = $dbh->prepare($sql);
+            $sth->execute($transid);
+            if ( $sth->err ) {
+                db_error($sth);
+                $status = 0x80;
+            }
+            else {
+                while(my $object = $sth->fetchrow_hashref()) {
+                    push(@objects, $object);
+                }
+            }
+            $sth->finish();
+        }
+        if ($status == 0) {
+            $dbh->begin_work();
+            $sql = 'UPDATE obj.ado SET deleted = true WHERE deleted != true AND appid = ? AND uuid = ? RETURNING id';
+            foreach (@objects) {
+                my $sth = $dbh->prepare($sql);
+                $sth->execute(  $_->{appid},
+                                $_->{uuid});
+                if ( $sth->err ) {
+                    db_error($sth);
+                    $status = 0x80;
+                }
+                else {
+                    my $res = $sth->fetchrow_hashref();
+                    if(!exists($res->{id})) { $status = 0x04; last; } # NOT FOUND
+                }
+                $sth->finish();
+            }
+            if($status) {$dbh->rollback();}
+            else {$dbh->commit();}
+        }
+        if($self->end_transaction($transid)) { $status = 0x83; }
+    }
+
+    return $status;
 }
 
 # Select command
