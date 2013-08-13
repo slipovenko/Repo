@@ -65,8 +65,9 @@ sub insert
     my $self = shift;
     my $params = shift;
     my $dbh = $self->{_db};
+    my $seqno = exists($self->{cmd}->{seqno})?$self->{cmd}->{seqno}:0;
     my $status = 0;
-    my $types = {};
+
     my $sql = "SELECT value FROM conf.status ".
         "INNER JOIN obj.app USING(appid) ".
         "WHERE appid = ? AND deleted != true";
@@ -78,6 +79,8 @@ sub insert
     else { return 0x7F; }
     my $rv = $sth->finish();
 
+    # Load types dictionary
+    my $types = {};
     $sql = "SELECT id, mtype FROM dict.type WHERE deleted != true";
     $sth = $dbh->prepare($sql);
     $sth->execute();
@@ -86,10 +89,30 @@ sub insert
     }
     $rv = $sth->finish();
 
-    $sql = 'INSERT INTO tmp.ado '.
-        '(appid, actionid, seqno, uuid, flink, ilink, tid, name, attr) '.
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::hstore)';
+    # Get transaction ID if in sequence or get new
     $dbh->begin_work();
+    if($seqno > 0) {
+        $sql = 'SELECT id FROM tmp.transactions WHERE appid = ? AND actionid = ? AND type = ?';
+    }
+    else {
+        $sql = 'INSERT INTO tmp.transactions(appid, actionid, type) VALUES (?, ?, ?) RETURNING id';
+    }
+    $sth = $dbh->prepare($sql);
+    $sth->execute(  $params->{appid},
+                    $self->{cmd}->{actionid},
+                    'insert');
+    if ( $sth->err ) {
+        printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
+        return 0xFF;
+    }
+    my $transaction = $sth->fetchrow_hashref();
+    if(!defined($transaction)) { return 0x7E; }
+    my $transid = $transaction->{id};
+
+    # Save temporary data
+    $sql = 'INSERT INTO tmp.ado_insert '.
+        '(transid, seqno, uuid, flink, ilink, tid, name, attr) '.
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?::hstore)';
     foreach my $uuid (keys %{$params->{objects}}) {
         my $object = $params->{objects}->{$uuid};
         my @attr = ();
@@ -99,9 +122,8 @@ sub insert
             }
         }
         $sth = $dbh->prepare($sql);
-        $sth->execute(  $params->{appid},
-                        $self->{cmd}->{actionid},
-                        exists($self->{cmd}->{seqno})?$self->{cmd}->{seqno}:0,
+        $sth->execute(  $transid,
+                        $seqno,
                         $uuid,
                         $object->{link},
                         $object->{img},
@@ -120,26 +142,31 @@ sub insert
     if($status) {$dbh->rollback();}
     else {$dbh->commit();}
 
-    $sql = 'INSERT INTO obj.ado (appid, uuid, flink, ilink, tid, name, attr) '.
-        'SELECT appid, uuid, flink, ilink, tid, name, attr FROM tmp.ado WHERE actionid = ?';
-    $sth = $dbh->prepare($sql);
-    $sth->execute($self->{cmd}->{actionid});
-    if ( $sth->err ) {
-        printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
-        $status = 0xFF;
-        $status = 0x03 if $sth->state eq '23505';   # DUPLICATED UUID
-        $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
-    }
-    $rv = $sth->finish();
+    # End of operation
+    if($params->{complete}) {
+        $sql = 'INSERT INTO obj.ado (appid, uuid, flink, ilink, tid, name, attr) '.
+            'SELECT appid, uuid, flink, ilink, tid, name, attr FROM tmp.ado_insert a '.
+            'INNER JOIN tmp.transactions t ON t.id=a.transid '.
+            'WHERE transid = ?';
+        $sth = $dbh->prepare($sql);
+        $sth->execute($transid);
+        if ( $sth->err ) {
+            printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
+            $status = 0xFF;
+            $status = 0x03 if $sth->state eq '23505';   # DUPLICATED UUID
+            $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
+        }
+        $rv = $sth->finish();
 
-    $sql = 'DELETE FROM tmp.ado WHERE actionid = ?';
-    $sth = $dbh->prepare($sql);
-    $sth->execute($self->{cmd}->{actionid});
-    if ( $sth->err ) {
-        printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
-        $status = 0xFF;
+        $sql = 'DELETE FROM tmp.transactions WHERE id = ?';
+        $sth = $dbh->prepare($sql);
+        $sth->execute($transid);
+        if ( $sth->err ) {
+            printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
+            $status = 0xFF;
+        }
+        $rv = $sth->finish();
     }
-    $rv = $sth->finish();
 
     return $status;
 }

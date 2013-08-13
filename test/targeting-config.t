@@ -60,6 +60,7 @@
         "parameters":
         {
             "appid": 2147483647,
+            "complete": 1,
             "objects":
             {
                 "2c56a6e1-87af-40e7-af3c-da670e453b8e":
@@ -95,6 +96,7 @@
         "parameters":
         {
             "appid": 1003,
+            "complete": 1,
             "objects":
             {
                 "dce8a85c-0b8a-444e-91fb-65774f99bfdb":
@@ -119,6 +121,7 @@
         "parameters":
         {
             "appid": 1002,
+            "complete": 1,
             "objects":
             {
                 "33d49573-acb6-4411-82d6-48bce202ec52":
@@ -136,6 +139,7 @@
         "parameters":
         {
             "appid": 1001,
+            "complete": 1,
             "objects":
             {
                 "22e9d922-41e9-47c1-969b-588cc381f84d":
