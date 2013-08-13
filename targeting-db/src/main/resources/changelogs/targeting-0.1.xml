@@ -15,6 +15,7 @@
             CREATE SCHEMA dict;
             CREATE SCHEMA obj;
             CREATE SCHEMA conf;
+            CREATE SCHEMA tmp;
             CREATE EXTENSION "uuid-ossp";
             CREATE EXTENSION "hstore";
         </sql>
@@ -23,6 +24,7 @@
                 DROP SCHEMA dict;
                 DROP SCHEMA obj;
                 DROP SCHEMA conf;
+                DROP SCHEMA tmp;
                 DROP EXTENSION "uuid-ossp";
                 DROP EXTENSION "hstore";
             </sql>
@@ -133,7 +135,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="name" type="varchar" remarks="Имя объекта"/>
-            <column name="attr" type="varchar" remarks="Список значений атрибутов таргетинга"/>
+            <column name="attr" type="hstore" remarks="Список значений атрибутов таргетинга" defaultValue="''::hstore"/>
             <column name="deleted" type="boolean" remarks="Флаг, что объект удален" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
@@ -272,6 +274,11 @@
     </changeSet>
 
     <changeSet id="0.1-5" author="svnovikov" context="initdata">
+        <insert tableName="type" schemaName="dict">
+            <column name="id" valueNumeric="0"/>
+            <column name="mtype" value="uknown"/>
+            <column name="name" value="Неизвестный"/>
+        </insert>
         <insert tableName="type" schemaName="dict">
             <column name="mtype" value="image"/>
             <column name="name" value="Изображение"/>
@@ -573,7 +580,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-10" author="svnovikov" context="testdata">
+    <changeSet id="0.1-10" author="svnovikov" context="schemas">
         <createProcedure>
             CREATE OR REPLACE FUNCTION obj.group_get_attr_as_json(id integer)
               RETURNS json AS
@@ -596,7 +603,116 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-11" author="svnovikov" context="testdata">
+    <changeSet id="0.1-11" author="svnovikov" context="schemas">
+        <createTable tableName="transactions" schemaName="tmp" remarks="Список активных транзакций">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appid" type="integer" remarks="ИД приложения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actionid" type="varchar" remarks="ИД запроса">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="varchar" remarks="Тип запроса">
+                <constraints nullable="false"/>
+            </column>
+            <column name="atime" type="DATETIME" remarks="Время добавления транзакции" defaultValueComputed="now()"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_transactions_appid"
+                                 baseTableName="transactions" baseTableSchemaName="tmp"
+                                 baseColumnNames="appid"
+                                 referencedTableName="app" referencedTableSchemaName="obj"
+                                 referencedColumnNames="appid"
+                                 onDelete="RESTRICT" onUpdate="CASCADE"/>
+        <createTable tableName="ado_insert" schemaName="tmp" remarks="Временное хранилище для добавляемых объектов">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="transid" type="integer" remarks="ИД транзакции">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seqno" type="integer" remarks="Порядковый номер в последовательности запросов">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID" remarks="UUID объекта">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="flink" type="varchar" remarks="Ссылка на файл объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ilink" type="varchar" remarks="Ссылка на изображение объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tid" type="integer" remarks="ИД типа контента">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar" remarks="Имя объекта"/>
+            <column name="attr" type="hstore" remarks="Список значений атрибутов таргетинга" defaultValue="''::hstore"/>
+            <column name="atime" type="DATETIME" remarks="Время добавления записи" defaultValueComputed="now()"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_ado_insert_tid"
+                                 baseTableName="ado_insert" baseTableSchemaName="tmp"
+                                 baseColumnNames="transid"
+                                 referencedTableName="transactions" referencedTableSchemaName="tmp"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+        <createTable tableName="ado_update" schemaName="tmp" remarks="Временное хранилище для обновляемых объектов">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="transid" type="integer" remarks="ИД транзакции">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seqno" type="integer" remarks="Порядковый номер в последовательности запросов">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID" remarks="UUID объекта">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="flink" type="varchar" remarks="Ссылка на файл объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ilink" type="varchar" remarks="Ссылка на изображение объекта">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tid" type="integer" remarks="ИД типа контента">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar" remarks="Имя объекта"/>
+            <column name="attr" type="hstore" remarks="Список значений атрибутов таргетинга" defaultValue="''::hstore"/>
+            <column name="atime" type="DATETIME" remarks="Время добавления записи" defaultValueComputed="now()"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_ado_update_tid"
+                                 baseTableName="ado_update" baseTableSchemaName="tmp"
+                                 baseColumnNames="transid"
+                                 referencedTableName="transactions" referencedTableSchemaName="tmp"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+        <createTable tableName="ado_delete" schemaName="tmp" remarks="Временное хранилище для удаляемых объектов">
+            <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="transid" type="integer" remarks="ИД транзакции">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seqno" type="integer" remarks="Порядковый номер в последовательности запросов">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID" remarks="UUID объекта">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="atime" type="DATETIME" remarks="Время добавления записи" defaultValueComputed="now()"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_ado_delete_tid"
+                                 baseTableName="ado_delete" baseTableSchemaName="tmp"
+                                 baseColumnNames="transid"
+                                 referencedTableName="transactions" referencedTableSchemaName="tmp"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE" onUpdate="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="0.1-12" author="svnovikov" context="testdata">
         <sql>
             -- Test objects
             INSERT INTO obj.app
@@ -662,7 +778,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-12" author="svnovikov" context="testdata">
+    <changeSet id="0.1-13" author="svnovikov" context="testdata">
         <sql>
             -- Test configuration
             INSERT INTO conf.current
