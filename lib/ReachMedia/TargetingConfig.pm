@@ -65,52 +65,25 @@ sub insert
     my $self = shift;
     my $params = shift;
     my $dbh = $self->{_db};
+    my $actionid = $self->{cmd}->{actionid};
     my $seqno = exists($self->{cmd}->{seqno})?$self->{cmd}->{seqno}:0;
-    my $status = 0;
 
-    my $sql = "SELECT value FROM conf.status ".
-        "INNER JOIN obj.app USING(appid) ".
-        "WHERE appid = ? AND deleted != true";
-    my $sth = $dbh->prepare($sql);
-    $sth->execute($params->{appid});
-    if(my $status = $sth->fetchrow_hashref()) {
-        if($status->{value} > 0) { return 0x01; }
-    }
-    else { return 0x7F; }
-    my $rv = $sth->finish();
+    # Check configuration status
+    my $status = $self->get_conf_status($params->{appid});
+    if(!defined($status)) { return 0x7F; }
+    if($status > 0) { return 0x01; }
 
     # Load types dictionary
-    my $types = {};
-    $sql = "SELECT id, mtype FROM dict.type WHERE deleted != true";
-    $sth = $dbh->prepare($sql);
-    $sth->execute();
-    while(my $type = $sth->fetchrow_hashref()) {
-        $types->{$type->{mtype}} = $type->{id};
-    }
-    $rv = $sth->finish();
+    my $types = $self->get_dict_type();
+    if(!defined($types)) { return 0x81; }
 
     # Get transaction ID if in sequence or get new
     $dbh->begin_work();
-    if($seqno > 0) {
-        $sql = 'SELECT id FROM tmp.transactions WHERE appid = ? AND actionid = ? AND type = ?';
-    }
-    else {
-        $sql = 'INSERT INTO tmp.transactions(appid, actionid, type) VALUES (?, ?, ?) RETURNING id';
-    }
-    $sth = $dbh->prepare($sql);
-    $sth->execute(  $params->{appid},
-                    $self->{cmd}->{actionid},
-                    'insert');
-    if ( $sth->err ) {
-        printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
-        return 0xFF;
-    }
-    my $transaction = $sth->fetchrow_hashref();
-    if(!defined($transaction)) { return 0x7E; }
-    my $transid = $transaction->{id};
+    my $transid = $self->get_transaction_id($params->{appid}, $actionid, $seqno, 'insert');
+    if(!defined($transid)) { return 0x82; }
 
     # Save temporary data
-    $sql = 'INSERT INTO tmp.ado_insert '.
+    my $sql = 'INSERT INTO tmp.ado_insert '.
         '(transid, seqno, uuid, flink, ilink, tid, name, attr) '.
         'VALUES (?, ?, ?, ?, ?, ?, ?, ?::hstore)';
     foreach my $uuid (keys %{$params->{objects}}) {
@@ -121,51 +94,44 @@ sub insert
                 push(@attr, sprintf('%s=>%s', $t, join(';', @{$object->{attr}->{$t}})));
             }
         }
-        $sth = $dbh->prepare($sql);
+        my $sth = $dbh->prepare($sql);
         $sth->execute(  $transid,
                         $seqno,
                         $uuid,
                         $object->{link},
                         $object->{img},
                         exists($object->{mtype})?$types->{$object->{mtype}}:0,
-                        exists($object->{name})?$object->{name}:'',
+                        exists($object->{name})?$object->{name}:'Без имени',
                         join(',', @attr));
         if ( $sth->err ) {
-            printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
-            $status = 0xFF;
+            db_error($sth);
+            $status = 0x80;
             $status = 0x03 if $sth->state eq '23505';   # DUPLICATED UUID
             $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
-            return $status;
         }
-        $rv = $sth->finish();
+        $sth->finish();
     }
     if($status) {$dbh->rollback();}
     else {$dbh->commit();}
 
     # End of operation
     if($params->{complete}) {
-        $sql = 'INSERT INTO obj.ado (appid, uuid, flink, ilink, tid, name, attr) '.
-            'SELECT appid, uuid, flink, ilink, tid, name, attr FROM tmp.ado_insert a '.
-            'INNER JOIN tmp.transactions t ON t.id=a.transid '.
-            'WHERE transid = ?';
-        $sth = $dbh->prepare($sql);
-        $sth->execute($transid);
-        if ( $sth->err ) {
-            printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
-            $status = 0xFF;
-            $status = 0x03 if $sth->state eq '23505';   # DUPLICATED UUID
-            $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
+        if ($status == 0) {
+            $sql = 'INSERT INTO obj.ado (appid, uuid, flink, ilink, tid, name, attr) '.
+                'SELECT appid, uuid, flink, ilink, tid, name, attr FROM tmp.ado_insert a '.
+                'INNER JOIN tmp.transactions t ON t.id=a.transid '.
+                'WHERE transid = ?';
+            my $sth = $dbh->prepare($sql);
+            $sth->execute($transid);
+            if ( $sth->err ) {
+                db_error($sth);
+                $status = 0x80;
+                $status = 0x03 if $sth->state eq '23505';   # DUPLICATED UUID
+                $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
+            }
+            $sth->finish();
         }
-        $rv = $sth->finish();
-
-        $sql = 'DELETE FROM tmp.transactions WHERE id = ?';
-        $sth = $dbh->prepare($sql);
-        $sth->execute($transid);
-        if ( $sth->err ) {
-            printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
-            $status = 0xFF;
-        }
-        $rv = $sth->finish();
+        if($self->end_transaction($transid)) { $status = 0x83; }
     }
 
     return $status;
@@ -176,8 +142,107 @@ sub update
 {
     my $self = shift;
     my $params = shift;
+    my $dbh = $self->{_db};
+    my $actionid = $self->{cmd}->{actionid};
+    my $seqno = exists($self->{cmd}->{seqno})?$self->{cmd}->{seqno}:0;
 
-    return {};
+    # Check configuration status
+    my $status = $self->get_conf_status($params->{appid});
+    if(!defined($status)) { return 0x7F; }
+    if($status > 0) { return 0x01; }
+
+    # Load types dictionary
+    my $types = $self->get_dict_type();
+    if(!defined($types)) { return 0x81; }
+
+    # Get transaction ID if in sequence or get new
+    $dbh->begin_work();
+    my $transid = $self->get_transaction_id($params->{appid}, $actionid, $seqno, 'update');
+    if(!defined($transid)) { return 0x82; }
+
+    # Save temporary data
+    my $sql = 'INSERT INTO tmp.ado_update '.
+        '(transid, seqno, uuid, flink, ilink, tid, name, attr) '.
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?::hstore)';
+    foreach my $uuid (keys %{$params->{objects}}) {
+        my $object = $params->{objects}->{$uuid};
+        my @attr = ();
+        if(exists($object->{attr}) && (ref $object->{attr} eq 'HASH')) {
+            foreach my $t (keys %{$object->{attr}}) {
+                push(@attr, sprintf('%s=>%s', $t, join(';', @{$object->{attr}->{$t}})));
+            }
+        }
+        my $sth = $dbh->prepare($sql);
+        $sth->execute(  $transid,
+                        $seqno,
+                        $uuid,
+                        $object->{link},
+                        $object->{img},
+                        exists($object->{mtype})?$types->{$object->{mtype}}:0,
+                        exists($object->{name})?$object->{name}:'Без имени',
+                        join(',', @attr));
+        if ( $sth->err ) {
+            db_error($sth);
+            $status = 0x80;
+            $status = 0x03 if $sth->state eq '23505';   # DUPLICATED UUID
+            $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
+        }
+        $sth->finish();
+    }
+    if($status) {$dbh->rollback();}
+    else {$dbh->commit();}
+
+    # End of operation
+    if($params->{complete}) {
+        my @objects;
+        if ($status == 0) {
+            $sql = 'SELECT appid, uuid, flink, ilink, tid, name, attr FROM tmp.ado_update a '.
+                'INNER JOIN tmp.transactions t ON t.id=a.transid '.
+                'WHERE transid = ?';
+            my $sth = $dbh->prepare($sql);
+            $sth->execute($transid);
+            if ( $sth->err ) {
+                db_error($sth);
+                $status = 0x80;
+                $status = 0x7F if $sth->state eq '23503';   # WRONG APPID
+            }
+            else {
+                while(my $object = $sth->fetchrow_hashref()) {
+                    push(@objects, $object);
+                }
+            }
+            $sth->finish();
+        }
+        if ($status == 0) {
+            $dbh->begin_work();
+            $sql = 'UPDATE obj.ado SET flink = ?, ilink = ?, tid = ?, name = ?, attr = ? '.
+                'WHERE appid = ? AND uuid = ? RETURNING id';
+            foreach (@objects) {
+                my $sth = $dbh->prepare($sql);
+                $sth->execute(  $_->{flink},
+                                $_->{ilink},
+                                $_->{tid},
+                                $_->{name},
+                                $_->{attr},
+                                $_->{appid},
+                                $_->{uuid});
+                if ( $sth->err ) {
+                    db_error($sth);
+                    $status = 0x80;
+                }
+                else {
+                    my $res = $sth->fetchrow_hashref();
+                    if(!exists($res->{id})) { $status = 0x04; last; } # NOT FOUND
+                }
+                $sth->finish();
+            }
+            if($status) {$dbh->rollback();}
+            else {$dbh->commit();}
+        }
+        if($self->end_transaction($transid)) { $status = 0x83; }
+    }
+
+    return $status;
 }
 
 # Delete command
@@ -1044,6 +1109,81 @@ sub to_hstore
         push(@t, sprintf('"%s"=>"%s"', $a->{tag}, join(';', @{$a->{values}})));
     }
     return join(',', @t);
+}
+
+sub db_error {
+    my $sth = shift;
+    printf("DB ERROR #%s (%s): '%s'\n", $sth->err, $sth->state, $sth->errstr);
+}
+
+sub get_conf_status {
+    my $self = shift;
+    my $appid = shift;
+    my $sql = "SELECT value FROM conf.status ".
+        "INNER JOIN obj.app USING(appid) ".
+        "WHERE appid = ? AND deleted != true";
+    my $sth = $self->{_db}->prepare($sql);
+    $sth->execute($appid);
+    if ( $sth->err ) {
+        db_error($sth);
+        return undef;
+    }
+    my $status = $sth->fetchrow_hashref();
+    $sth->finish();
+    return $status->{value};
+}
+
+sub get_dict_type {
+    my $self = shift;
+    my $types = {};
+    my $sql = "SELECT id, mtype FROM dict.type WHERE deleted != true";
+    my $sth = $self->{_db}->prepare($sql);
+    $sth->execute();
+    if ( $sth->err ) {
+        db_error($sth);
+        return undef;
+    }
+    while(my $type = $sth->fetchrow_hashref()) {
+        $types->{$type->{mtype}} = $type->{id};
+    }
+    $sth->finish();
+    return $types;
+}
+
+sub get_transaction_id {
+    my $self = shift;
+    my ($appid, $actionid, $seqno, $type) = @_;
+    my $sql;
+    if($seqno > 0) {
+        $sql = 'SELECT id FROM tmp.transactions WHERE appid = ? AND actionid = ? AND type = ?';
+    }
+    else {
+        $sql = 'INSERT INTO tmp.transactions(appid, actionid, type) VALUES (?, ?, ?) RETURNING id';
+    }
+    my $sth = $self->{_db}->prepare($sql);
+    $sth->execute($appid, $actionid, $type);
+    if ( $sth->err ) {
+        db_error($sth);
+        return undef;
+    }
+    my $transaction = $sth->fetchrow_hashref();
+    $sth->finish();
+    if(!defined($transaction)) { return undef; }
+    return $transaction->{id};
+}
+
+sub end_transaction {
+    my $self = shift;
+    my $transid = shift;
+    my $sql = 'DELETE FROM tmp.transactions WHERE id = ?';
+    my $sth = $self->{_db}->prepare($sql);
+    $sth->execute($transid);
+    if ( $sth->err ) {
+        db_error($sth);
+        return 1;
+    }
+    $sth->finish();
+    return 0;
 }
 
 1;
