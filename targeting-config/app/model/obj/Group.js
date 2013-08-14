@@ -8,7 +8,7 @@ Ext.define('Targeting.model.obj.Group', {
             create  : '/call/targeting-config/edit?store=obj.group&action=create',
             read: '/call/targeting-config/edit?store=obj.group&action=read',
             update: '/call/targeting-config/edit?store=obj.group&action=update',
-            destroy : '/call/targeting-config/edit?store=obj.group&action=destroy'
+            destroy: '/call/targeting-config/edit?store=obj.group&action=destroy'
         },
         reader: {
             type: 'json',

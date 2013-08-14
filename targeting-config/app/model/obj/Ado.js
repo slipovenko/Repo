@@ -8,7 +8,7 @@ Ext.define('Targeting.model.obj.Ado', {
             create  : '/call/targeting-config/edit?store=obj.ado&action=create',
             read: '/call/targeting-config/edit?store=obj.ado&action=read',
             update: '/call/targeting-config/edit?store=obj.ado&action=update',
-            destroy : '/call/targeting-config/edit?store=obj.ado&action=destroy'
+            destroy: '/call/targeting-config/edit?store=obj.ado&action=destroy'
         },
         reader: {
             type: 'json',

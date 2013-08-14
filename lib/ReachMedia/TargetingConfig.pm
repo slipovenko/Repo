@@ -867,8 +867,40 @@ sub query_groupado
 	my $dbh = $self->{_db};
 
 	switch($self->{_action}) {
+		case 'create' {
+            my $sql = "INSERT INTO obj.ado2group (oid, gid, enable)".
+                    "VALUES (?,?,?) RETURNING oid AS id, oid, gid, enable";
+            my $errcnt = 0;
+
+            $dbh->begin_work();
+            foreach my $r (@idata)
+            {
+                my $sth = $dbh->prepare($sql);
+                $sth->execute($r->{oid}, $r->{gid}, $r->{enable});
+                if ( $sth->err )
+                {
+                    my %rep = ('oid' => $r->{oid}, 'gid' => $r->{gid}, 'enable' => $r->{enable},
+                     'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                    push @{$odata{results}}, \%rep;
+                    $errcnt++;
+                }
+                else
+                {
+                    my $a2g = $sth->fetchrow_hashref();
+                    my $stha = $dbh->prepare("SELECT name, tid FROM obj.ado WHERE id = ? AND deleted = false");
+                    $stha->execute($a2g->{oid});
+                    my $ado = $stha->fetchrow_hashref();
+                    $a2g->{name} = $ado->{name};
+                    $a2g->{tid} = $ado->{tid};
+                    push @{$odata{results}}, $a2g;
+                }
+                my $rv = $sth->finish();
+            }
+            if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+            else { $dbh->commit(); $odata{success} = JSON::XS::true; }
+        }
 		case 'read' {
-            my $sql = "SELECT a.id, g.gid, g.enable, a.name, a.tid ".
+            my $sql = "SELECT a.id, g.oid, g.gid, g.enable, a.name, a.tid ".
                     "FROM obj.ado2group g ".
                     "INNER JOIN obj.ado a ".
                     "ON g.oid = a.id ".
@@ -881,6 +913,48 @@ sub query_groupado
             if ( $sth->err ) { $odata{success} = JSON::XS::false; $odata{err_code} = $sth->err; $odata{err_msg} = $sth->errstr; }
             else { $odata{success} = JSON::XS::true; }
             my $rv = $sth->finish();
+        }
+		case 'update' {
+            my $sql = "UPDATE obj.ado2group SET enable = ? WHERE oid = ? AND gid = ?";
+            my $errcnt = 0;
+
+            $dbh->begin_work();
+            foreach my $r (@idata)
+            {
+                my $sth = $dbh->prepare($sql);
+                $sth->execute($r->{enable}, $r->{oid}, $r->{gid});
+                if ( $sth->err )
+                {
+                    my %rep = ('oid' => $r->{oid}, 'gid' => $r->{gid}, 'enable' => $r->{enable},
+                     'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                    push @{$odata{results}}, \%rep;
+                    $errcnt++;
+                }
+                my $rv = $sth->finish();
+            }
+            if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+            else { $dbh->commit(); $odata{success} = JSON::XS::true; }
+        }
+		case 'destroy' {
+            my $sql = "DELETE FROM obj.ado2group WHERE oid = ? AND gid = ?";
+            my $errcnt = 0;
+
+            $dbh->begin_work();
+            foreach my $r (@idata)
+            {
+                my $sth = $dbh->prepare($sql);
+                $sth->execute($r->{oid}, $r->{gid});
+                if ( $sth->err )
+                {
+                    my %rep = ('oid' => $r->{oid}, 'gid' => $r->{gid}, 'enable' => $r->{enable},
+                     'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                    push @{$odata{results}}, \%rep;
+                    $errcnt++;
+                }
+                my $rv = $sth->finish();
+            }
+            if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+            else { $dbh->commit(); $odata{success} = JSON::XS::true; }
         }
 		else { $odata{success} = JSON::XS::false; }
 	}

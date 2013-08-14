@@ -2,7 +2,7 @@
     extend: 'Ext.app.Controller',
     models: ['obj.App', 'obj.Group', 'obj.GroupAdo', 'obj.GroupAttr', 'dict.Attribute', 'dict.Priority', 'dict.Type'],
     stores: ['obj.Apps', 'obj.Groups', 'obj.GroupAdos', 'obj.GroupAttrs', 'dict.Attributes', 'dict.Priorities', 'dict.Types'],
-    views: ['group.List', 'group.Edit', 'group.AdoList', 'group.AttrTree'],
+    views: ['group.List', 'group.Edit', 'group.AdoList', 'group.AdoAdd', 'group.AttrTree'],
 
     refs: [{
         ref: 'groupList',
@@ -16,6 +16,9 @@
     },{
         ref: 'groupAdoList',
         selector: 'groupadolist'
+    },{
+        ref: 'groupAdoAdd',
+        selector: 'groupadoadd'
     },{
         ref: 'groupAttrTree',
         selector: 'groupattrtree'
@@ -39,6 +42,21 @@
             'groupattrtree': {
                 checkchange: this.onGroupAttrTreeCheckChange,
                 load: this.onGroupAttrLoad
+            },
+            'groupadolist button[action=add]': {
+                click: this.onGroupAdoAdd
+            },
+            'groupadolist actioncolumn': {
+                click: this.onGroupAdoDelete
+            },
+            'groupadoadd': {
+                beforeclose: this.onGroupAdoAddClose
+            },
+            'groupadoadd button[action=ok]': {
+                click: this.onGroupAdoAddOK
+            },
+            'groupadoadd button[action=cancel]': {
+                click: this.onGroupAdoAddCancel
             }
         });
 
@@ -199,6 +217,17 @@
             this.getObjGroupsStore().sync({
                 success: function (b, o) {
                     console.log('Saved group: ' + record.get('name'));
+                    var ados = this.getObjGroupAdosStore(),
+                        group = this.getGroupList().getSelectionModel().getSelection()[0];
+                    ados.sync({
+                        success: function (b, o) {
+                            console.log('Saved ados for group: ' + group.get('name'));
+                        },
+                        failure: function (b, o) {
+                            console.log('ERROR saving ados for group: ' + group.get('name'));
+                        },
+                        scope: this
+                    });
                 },
                 failure: function (b, o) {
                     console.log('ERROR saving group: ' + record.get('name'));
@@ -293,5 +322,69 @@
         );
 
         group.set('attr', attr);
+    },
+
+    onGroupAdoAdd: function() {
+        var window = Ext.create('Targeting.view.group.AdoAdd'),
+            store = Ext.getStore('obj.Ados'),
+            ados = this.getObjGroupAdosStore();
+        store.filterBy(
+            function(record, id){
+                return ados.getById(id)==null;
+            },
+            this
+        );
+        window.show();
+    },
+
+    onGroupAdoDelete: function(view,cell,row,col,e) {
+        var ados = this.getObjGroupAdosStore(),
+            group = this.getGroupList().getSelectionModel().getSelection()[0];
+        ados.removeAt(row);
+        ados.sync({
+            success: function (b, o) {
+                console.log('Deleted ados for group: ' + group.get('name'));
+            },
+            failure: function (b, o) {
+                console.log('ERROR deleting ados for group: ' + group.get('name'));
+            },
+            scope: this
+        });
+    },
+
+    onGroupAdoAddOK: function(button) {
+        var window = button.up('window'),
+            grid = window.down('grid'),
+            records = grid.getSelectionModel().getSelection(),
+            ados = this.getObjGroupAdosStore(),
+            group = this.getGroupList().getSelectionModel().getSelection()[0];
+        for(var i = 0, n = records.length; i < n; i++) {
+            ados.insert(0, Ext.create('Targeting.model.obj.GroupAdo', {
+                oid: records[i].get('id'),
+                gid: group.get('id'),
+                enable: false,
+                name: records[i].get('name'),
+                tid: records[i].get('tid')
+            }));
+        }
+        ados.sync({
+            success: function (b, o) {
+                console.log('Added ados for group: ' + group.get('name'));
+            },
+            failure: function (b, o) {
+                console.log('ERROR adding ados for group: ' + group.get('name'));
+            },
+            scope: this
+        });
+        button.up('window').close();
+    },
+
+    onGroupAdoAddCancel: function(button) {
+        button.up('window').close();
+    },
+
+    onGroupAdoAddClose: function() {
+        Ext.getStore('obj.Ados').clearFilter();
     }
+
 });
