@@ -114,24 +114,34 @@
                 form.loadRecord(selection[0]);
                 // Attr Tree reset and reload
                 tree.getRootNode().cascadeBy(function(n){n.set('checked', (n.get('checked')!= null)?false:null);} );
-                var attr = this.getObjGroupAttrsStore();
-                attr.load({
-                    callback: this.onGroupAttrLoad,
-                    params: {
-                        id: selection[0].get('id')
-                    },
-                    scope: this
-                });
-                // Ado list for group reload
-                var ado = this.getObjGroupAdosStore();
-                ado.removeAll();
-                ado.load({
-                    //callback: this.onGroupAttrLoad,
-                    params: {
-                        gid: selection[0].get('id')
-                    },
-                    scope: this
-                });
+                var attr = this.getObjGroupAttrsStore(),
+                    ado = this.getObjGroupAdosStore(),
+                    gid = (typeof selection[0].get('id') != 'undefined')?selection[0].get('id'):0;
+                attr.removeAll();
+                if(gid>0) {
+                    // Ado list for group reload
+                    attr.load({
+                        callback: this.onGroupAttrLoad,
+                        params: {
+                            id: gid
+                        },
+                        scope: this
+                    });
+                    // Ado list for group reload
+                    ado.load({
+                        callback: this.onGroupAdoLoad,
+                        params: {
+                            gid: gid
+                        },
+                        scope: this
+                    });
+                }
+                else {
+                    attr.loadData({});
+                    ado.loadData({});
+                    Ext.getCmp('group-form-attredit').setDisabled(true);
+                    Ext.getCmp('group-form-adoedit').setDisabled(true);
+                }
                 // Enable buttons after selection
                 Ext.getCmp('group-button-del').setDisabled(false);
                 Ext.getCmp('group-button-upd').setDisabled(false);
@@ -228,6 +238,8 @@
                         },
                         scope: this
                     });
+                    Ext.getCmp('group-form-attredit').setDisabled(false);
+                    Ext.getCmp('group-form-adoedit').setDisabled(false);
                 },
                 failure: function (b, o) {
                     console.log('ERROR saving group: ' + record.get('name'));
@@ -265,11 +277,11 @@
     },
 
     // Set values
-    onGroupAttrLoad: function() {
+    onGroupAttrLoad: function(records, operation, success) {
         var attr = this.getObjGroupAttrsStore(),
             tree = this.getDictAttributesStore(),
             cnt = attr.count();
-        if(cnt > 0) {
+        if(success && cnt > 0) {
             for(var i = 0; i < cnt; i++) {
                 var a = attr.getAt(i),
                     tag = a.get('tag');
@@ -284,6 +296,7 @@
                 }
             }
         }
+        Ext.getCmp('group-form-attredit').setDisabled(!success);
     },
 
     // Update attr field using data in targeting tree
@@ -322,6 +335,10 @@
         );
 
         group.set('attr', attr);
+    },
+
+    onGroupAdoLoad: function(records, operation, success) {
+        Ext.getCmp('group-form-adoedit').setDisabled(!success);
     },
 
     onGroupAdoAdd: function() {
