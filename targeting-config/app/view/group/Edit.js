@@ -56,8 +56,8 @@ Ext.define('Targeting.view.group.Edit', {
                         fieldLabel: 'Вес',
                         allowBlank: false,
                         blankText: 'Значением статистического веса должно быть число большее или равное нулю',
-                        minValue: 1,
-                        minText: 'Минимальное значение 1',
+                        minValue: 0,
+                        minText: 'Минимальное значение 0',
                         maxValue: 2147483647,
                         maxText: 'Максимальное значение 2147483647'
                     },
