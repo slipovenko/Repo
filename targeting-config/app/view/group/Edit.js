@@ -35,7 +35,9 @@ Ext.define('Targeting.view.group.Edit', {
                     {
                         xtype: 'textfield',
                         name : 'name',
-                        fieldLabel: 'Имя'
+                        fieldLabel: 'Имя',
+                        allowBlank: false,
+                        blankText: 'Имя группы не должно быть пустым'
                     },
                     {
                         xtype: 'combo',
@@ -49,9 +51,15 @@ Ext.define('Targeting.view.group.Edit', {
                         fieldLabel: 'Приоритет'
                     },
                     {
-                        xtype: 'textfield',
+                        xtype: 'numberfield',
                         name : 'weight',
-                        fieldLabel: 'Вес'
+                        fieldLabel: 'Вес',
+                        allowBlank: false,
+                        blankText: 'Значением статистического веса должно быть число большее или равное нулю',
+                        minValue: 1,
+                        minText: 'Минимальное значение 1',
+                        maxValue: 2147483647,
+                        maxText: 'Максимальное значение 2147483647'
                     },
                     {
                         xtype: 'checkbox',

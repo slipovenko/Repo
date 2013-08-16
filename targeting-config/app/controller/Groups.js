@@ -201,7 +201,7 @@
         {
             Ext.getCmp('group-button-del').setDisabled(true);
             Ext.getCmp('group-button-upd').setDisabled(true);
-            form.loadRecord(Ext.create('Targeting.model.Group'));
+            form.loadRecord(Ext.create('Targeting.model.obj.Group'));
             form.setDisabled(true);
         }
         store.sync({
@@ -211,7 +211,9 @@
             failure: function (b, o) {
                 console.log('ERROR deleting group: ' + record.get('name'));
                 store.insert(pos, record);
-            }
+                this.getGroupList().getSelectionModel().select(pos);
+            },
+            scope: this
         });
     },
 
@@ -379,7 +381,7 @@
             ados.insert(0, Ext.create('Targeting.model.obj.GroupAdo', {
                 oid: records[i].get('id'),
                 gid: group.get('id'),
-                enable: false,
+                enable: true,
                 name: records[i].get('name'),
                 tid: records[i].get('tid')
             }));

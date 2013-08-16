@@ -19,14 +19,30 @@ Ext.define('Targeting.view.ado.Edit', {
     initComponent: function() {
         this.items = [
             {
-                xtype: 'fieldcontainer',
+                xtype: 'fieldset',
+                title: 'Базовые параметры',
                 layout: 'anchor',
+                collapsible: true,
                 margin: 5,
+                padding: 5,
+                defaults: {
+                    xtype: 'textfield',
+                    labelAlign: 'right',
+                    labelWidth: 75,
+                    width: 500,
+                    margin: '5 0 5 10'
+                },
                 items: [
                     {
-                        xtype: 'textfield',
+                        name : 'uuid',
+                        fieldLabel: 'UUID',
+                        readOnly: true
+                    },
+                    {
                         name : 'name',
-                        fieldLabel: 'Имя'
+                        fieldLabel: 'Имя',
+                        allowBlank: false,
+                        blankText: 'Имя объекта не должно быть пустым'
                     },
                     {
                         xtype: 'combo',
@@ -40,28 +56,25 @@ Ext.define('Targeting.view.ado.Edit', {
                         fieldLabel: 'Тип'
                     },
                     {
-                        xtype: 'textfield',
-                        name : 'uuid',
-                        fieldLabel: 'UUID',
-                        readOnly: true
-                    },
-                    {
-                        xtype: 'textfield',
                         name : 'flink',
                         fieldLabel: 'Файл',
-                        readOnly: true
+                        allowBlank: false,
+                        blankText: 'Ссылка на файл не должна быть пустой',
+                        vtype: 'url',
+                        vtypeText: 'Неверный формат ссылки'
                     },
                     {
-                        xtype: 'textfield',
                         name : 'ilink',
-                        fieldLabel: 'Ссылка',
-                        readOnly: true
+                        fieldLabel: 'Изображение',
+                        allowBlank: false,
+                        blankText: 'Ссылка на изображение не должна быть пустой',
+                        vtype: 'url',
+                        vtypeText: 'Неверный формат ссылки'
                     },
                     {
-                        xtype: 'textfield',
                         name : 'attr',
                         fieldLabel: 'Таргетинг',
-                        readOnly: true
+                        hidden: true
                     }
                 ]
             }

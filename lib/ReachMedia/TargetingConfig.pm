@@ -673,8 +673,30 @@ sub query_ado
 	{
 		case 'create'
 			{
-				my $sql = "INSERT INTO obj.ado(appid,uuid,flink,ilink,tid,name,attr) VALUES (?, ?, ?, ?, ?, ?, ?)";
-				$odata{success} = JSON::XS::false;
+				my $sql = "INSERT INTO obj.ado(appid,uuid,name,tid,flink,ilink) VALUES (?, ?, ?, ?, ?, ?) ".
+				    "RETURNING id, appid, uuid, name, tid, flink, ilink, attr";
+				my $errcnt = 0;
+
+				$dbh->begin_work();
+				foreach my $r (@idata)
+				{
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($r->{appid}, $r->{uuid}, $r->{name}, $r->{tid}, $r->{flink}, $r->{ilink});
+                    if ( $sth->err )
+                    {
+                        my %rep = ('uuid' => $r->{uuid}, 'name' => $r->{name}, 'flink' => $r->{flink}, ilink => $r->{ilink},
+                        'tid' => $r->{tid}, 'appid' => $r->{appid}, 'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        push @{$odata{results}}, \%rep;
+                        $errcnt++;
+                    }
+                    else
+                    {
+                        push @{$odata{results}}, $sth->fetchrow_hashref();
+                    }
+                    my $rv = $sth->finish();
+                }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = JSON::XS::true; }
 			}
 		case 'read'
 			{
@@ -691,17 +713,18 @@ sub query_ado
 			}
 		case 'update'
 			{
-				my $sql = "UPDATE obj.ado SET name = ?, tid = ? WHERE id = ? AND deleted != true";
+				my $sql = "UPDATE obj.ado SET name = ?, tid = ?, flink = ?, ilink = ? WHERE id = ? AND deleted != true";
 				my $errcnt = 0;
 
 				$dbh->begin_work();
 				foreach my $r (@idata)
 				{
                     my $sth = $dbh->prepare($sql);
-                    $sth->execute($r->{name}, $r->{tid}, $r->{id});
+                    $sth->execute($r->{name}, $r->{tid}, $r->{flink}, $r->{ilink}, $r->{id});
                     if ( $sth->err )
                     {
-                        my %rep = ('id' => $r->{id}, 'name' => $r->{name}, 'tid' => $r->{tid}, 'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        my %rep = ('id' => $r->{id}, 'name' => $r->{name}, 'tid' => $r->{tid}, 'flink' => $r->{flink},
+                            ilink => $r->{ilink}, 'err_code' => $sth->err, 'err_msg' => $sth->errstr);
                         push @{$odata{results}}, \%rep;
                         $errcnt++;
                     }
@@ -713,7 +736,23 @@ sub query_ado
 		case 'destroy'
 			{
 				my $sql = "UPDATE obj.ado SET deleted = true WHERE id = ?";
-				$odata{success} = JSON::XS::false;
+                my $errcnt = 0;
+
+                $dbh->begin_work();
+                foreach my $r (@idata)
+                {
+                    my $sth = $dbh->prepare($sql);
+                    $sth->execute($r->{id});
+                    if ( $sth->err )
+                    {
+                        my %rep = ('id' => $r->{id}, 'err_code' => $sth->err, 'err_msg' => $sth->errstr);
+                        push @{$odata{results}}, \%rep;
+                        $errcnt++;
+                    }
+                    my $rv = $sth->finish();
+                }
+                if ( $errcnt>0 ) { $dbh->rollback(); $odata{success} = JSON::XS::false; $odata{errcnt} = $errcnt; }
+                else { $dbh->commit(); $odata{success} = JSON::XS::true; }
 			}
 		else { $odata{success} = JSON::XS::false; }
 	}
