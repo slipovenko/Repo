@@ -2,7 +2,7 @@
     extend: 'Ext.app.Controller',
     models: ['obj.App', 'obj.Group', 'obj.GroupAdo', 'obj.GroupAttr', 'dict.Attribute', 'dict.Priority', 'dict.Type'],
     stores: ['obj.Apps', 'obj.Groups', 'obj.GroupAdos', 'obj.GroupAttrs', 'dict.Attributes', 'dict.Priorities', 'dict.Types'],
-    views: ['group.List', 'group.Edit', 'group.AdoList', 'group.AttrTree'],
+    views: ['group.List', 'group.Edit', 'group.AdoList', 'group.AdoAdd', 'group.AttrTree'],
 
     refs: [{
         ref: 'groupList',
@@ -16,6 +16,9 @@
     },{
         ref: 'groupAdoList',
         selector: 'groupadolist'
+    },{
+        ref: 'groupAdoAdd',
+        selector: 'groupadoadd'
     },{
         ref: 'groupAttrTree',
         selector: 'groupattrtree'
@@ -39,6 +42,21 @@
             'groupattrtree': {
                 checkchange: this.onGroupAttrTreeCheckChange,
                 load: this.onGroupAttrLoad
+            },
+            'groupadolist button[action=add]': {
+                click: this.onGroupAdoAdd
+            },
+            'groupadolist actioncolumn': {
+                click: this.onGroupAdoDelete
+            },
+            'groupadoadd': {
+                beforeclose: this.onGroupAdoAddClose
+            },
+            'groupadoadd button[action=ok]': {
+                click: this.onGroupAdoAddOK
+            },
+            'groupadoadd button[action=cancel]': {
+                click: this.onGroupAdoAddCancel
             }
         });
 
@@ -96,24 +114,34 @@
                 form.loadRecord(selection[0]);
                 // Attr Tree reset and reload
                 tree.getRootNode().cascadeBy(function(n){n.set('checked', (n.get('checked')!= null)?false:null);} );
-                var attr = this.getObjGroupAttrsStore();
-                attr.load({
-                    callback: this.onGroupAttrLoad,
-                    params: {
-                        id: selection[0].get('id')
-                    },
-                    scope: this
-                });
-                // Ado list for group reload
-                var ado = this.getObjGroupAdosStore();
-                ado.removeAll();
-                ado.load({
-                    //callback: this.onGroupAttrLoad,
-                    params: {
-                        gid: selection[0].get('id')
-                    },
-                    scope: this
-                });
+                var attr = this.getObjGroupAttrsStore(),
+                    ado = this.getObjGroupAdosStore(),
+                    gid = (typeof selection[0].get('id') != 'undefined')?selection[0].get('id'):0;
+                attr.removeAll();
+                if(gid>0) {
+                    // Ado list for group reload
+                    attr.load({
+                        callback: this.onGroupAttrLoad,
+                        params: {
+                            id: gid
+                        },
+                        scope: this
+                    });
+                    // Ado list for group reload
+                    ado.load({
+                        callback: this.onGroupAdoLoad,
+                        params: {
+                            gid: gid
+                        },
+                        scope: this
+                    });
+                }
+                else {
+                    attr.loadData({});
+                    ado.loadData({});
+                    Ext.getCmp('group-form-attredit').setDisabled(true);
+                    Ext.getCmp('group-form-adoedit').setDisabled(true);
+                }
                 // Enable buttons after selection
                 Ext.getCmp('group-button-del').setDisabled(false);
                 Ext.getCmp('group-button-upd').setDisabled(false);
@@ -173,7 +201,7 @@
         {
             Ext.getCmp('group-button-del').setDisabled(true);
             Ext.getCmp('group-button-upd').setDisabled(true);
-            form.loadRecord(Ext.create('Targeting.model.Group'));
+            form.loadRecord(Ext.create('Targeting.model.obj.Group'));
             form.setDisabled(true);
         }
         store.sync({
@@ -183,7 +211,9 @@
             failure: function (b, o) {
                 console.log('ERROR deleting group: ' + record.get('name'));
                 store.insert(pos, record);
-            }
+                this.getGroupList().getSelectionModel().select(pos);
+            },
+            scope: this
         });
     },
 
@@ -199,6 +229,19 @@
             this.getObjGroupsStore().sync({
                 success: function (b, o) {
                     console.log('Saved group: ' + record.get('name'));
+                    var ados = this.getObjGroupAdosStore(),
+                        group = this.getGroupList().getSelectionModel().getSelection()[0];
+                    ados.sync({
+                        success: function (b, o) {
+                            console.log('Saved ados for group: ' + group.get('name'));
+                        },
+                        failure: function (b, o) {
+                            console.log('ERROR saving ados for group: ' + group.get('name'));
+                        },
+                        scope: this
+                    });
+                    Ext.getCmp('group-form-attredit').setDisabled(false);
+                    Ext.getCmp('group-form-adoedit').setDisabled(false);
                 },
                 failure: function (b, o) {
                     console.log('ERROR saving group: ' + record.get('name'));
@@ -236,11 +279,11 @@
     },
 
     // Set values
-    onGroupAttrLoad: function() {
+    onGroupAttrLoad: function(records, operation, success) {
         var attr = this.getObjGroupAttrsStore(),
             tree = this.getDictAttributesStore(),
             cnt = attr.count();
-        if(cnt > 0) {
+        if(success && cnt > 0) {
             for(var i = 0; i < cnt; i++) {
                 var a = attr.getAt(i),
                     tag = a.get('tag');
@@ -255,6 +298,7 @@
                 }
             }
         }
+        Ext.getCmp('group-form-attredit').setDisabled(!success);
     },
 
     // Update attr field using data in targeting tree
@@ -293,5 +337,73 @@
         );
 
         group.set('attr', attr);
+    },
+
+    onGroupAdoLoad: function(records, operation, success) {
+        Ext.getCmp('group-form-adoedit').setDisabled(!success);
+    },
+
+    onGroupAdoAdd: function() {
+        var window = Ext.create('Targeting.view.group.AdoAdd'),
+            store = Ext.getStore('obj.Ados'),
+            ados = this.getObjGroupAdosStore();
+        store.filterBy(
+            function(record, id){
+                return ados.getById(id)==null;
+            },
+            this
+        );
+        window.show();
+    },
+
+    onGroupAdoDelete: function(view,cell,row,col,e) {
+        var ados = this.getObjGroupAdosStore(),
+            group = this.getGroupList().getSelectionModel().getSelection()[0];
+        ados.removeAt(row);
+        ados.sync({
+            success: function (b, o) {
+                console.log('Deleted ados for group: ' + group.get('name'));
+            },
+            failure: function (b, o) {
+                console.log('ERROR deleting ados for group: ' + group.get('name'));
+            },
+            scope: this
+        });
+    },
+
+    onGroupAdoAddOK: function(button) {
+        var window = button.up('window'),
+            grid = window.down('grid'),
+            records = grid.getSelectionModel().getSelection(),
+            ados = this.getObjGroupAdosStore(),
+            group = this.getGroupList().getSelectionModel().getSelection()[0];
+        for(var i = 0, n = records.length; i < n; i++) {
+            ados.insert(0, Ext.create('Targeting.model.obj.GroupAdo', {
+                oid: records[i].get('id'),
+                gid: group.get('id'),
+                enable: true,
+                name: records[i].get('name'),
+                tid: records[i].get('tid')
+            }));
+        }
+        ados.sync({
+            success: function (b, o) {
+                console.log('Added ados for group: ' + group.get('name'));
+            },
+            failure: function (b, o) {
+                console.log('ERROR adding ados for group: ' + group.get('name'));
+            },
+            scope: this
+        });
+        button.up('window').close();
+    },
+
+    onGroupAdoAddCancel: function(button) {
+        button.up('window').close();
+    },
+
+    onGroupAdoAddClose: function() {
+        Ext.getStore('obj.Ados').clearFilter();
     }
+
 });

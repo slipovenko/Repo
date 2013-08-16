@@ -1,6 +1,6 @@
 Ext.define('Targeting.model.obj.GroupAdo', {
     extend: 'Ext.data.Model',
-    fields: ['id', 'gid', 'enable', 'name', 'tid'],
+    fields: ['id', 'oid', 'gid', 'enable', 'name', 'tid'],
 
     proxy: {
         type: 'ajax',
@@ -8,7 +8,7 @@ Ext.define('Targeting.model.obj.GroupAdo', {
             create  : '/call/targeting-config/edit?store=obj.group.ado&action=create',
             read: '/call/targeting-config/edit?store=obj.group.ado&action=read',
             update: '/call/targeting-config/edit?store=obj.group.ado&action=update',
-            destroy : '/call/targeting-config/edit?store=obj.group.ado&action=destroy'
+            destroy: '/call/targeting-config/edit?store=obj.group.ado&action=destroy'
         },
         reader: {
             type: 'json',

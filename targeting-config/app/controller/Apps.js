@@ -161,7 +161,7 @@ Ext.define('Targeting.controller.Apps', {
             Ext.getCmp('app-button-del').setDisabled(true);
             Ext.getCmp('group-tab-panel').setDisabled(true);
             Ext.getCmp('ado-tab-panel').setDisabled(true);
-            form.loadRecord(Ext.create('Targeting.model.App'));
+            form.loadRecord(Ext.create('Targeting.model.obj.App'));
             form.setDisabled(true);
             form.show();
         }
@@ -172,7 +172,9 @@ Ext.define('Targeting.controller.Apps', {
             failure: function (b, o) {
                 console.log('ERROR deleting app: ' + record.get('name'));
                 store.insert(pos, record);
-            }
+                this.getAppList().getSelectionModel().select(pos);
+            },
+            scope: this
         });
     },
 

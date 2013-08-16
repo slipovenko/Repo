@@ -8,7 +8,7 @@ Ext.define('Targeting.model.obj.App', {
             create  : '/call/targeting-config/edit?store=obj.app&action=create',
             read: '/call/targeting-config/edit?store=obj.app&action=read',
             update: '/call/targeting-config/edit?store=obj.app&action=update',
-            destroy : '/call/targeting-config/edit?store=obj.app&action=destroy'
+            destroy: '/call/targeting-config/edit?store=obj.app&action=destroy'
         },
         reader: {
             type: 'json',
