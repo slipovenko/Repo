@@ -3,7 +3,7 @@ package ReachMedia::Targeting;
 use strict;
 use Bit::Vector;
 use Data::Dumper;
-use ReachMedia::DBRedis;
+use Redis::hiredis;
 use ReachMedia::ModuleRuntime;
 
 our @ISA = ("ReachMedia::ModuleRuntime");
@@ -17,7 +17,8 @@ sub new
 	my (%params) = @_;
 	my $self = $class->PARENT::new(name=>'targeting', desc=>'Targeting', debug=> $params{debug} || 0);
 
-    $self->{_redis} = ReachMedia::DBRedis->new()->connect('localhost', '6379');
+    $self->{_redis} = Redis::hiredis->new();
+    $self->{_redis}->connect('localhost', '6379');
 
 	bless($self, $class);
 

@@ -9,7 +9,7 @@ use Data::Dumper;
 use Switch;
 use DBI;
 use Bit::Vector;
-use ReachMedia::DBRedis;
+use Redis::hiredis;
 use ReachMedia::ModuleRuntime;
 
 our @ISA = ("ReachMedia::ModuleRuntime");
@@ -377,7 +377,8 @@ sub load
     my $response = '';
     my $dbh = $self->{_db};
 
-    my $redis = ReachMedia::DBRedis->new()->connect('localhost', '6379');
+    my $redis = Redis::hiredis->new();
+    $redis->connect('localhost', '6379');
 
     my $sql = "UPDATE conf.status SET value = 3 ".
         "WHERE value = 2 RETURNING appid, cid";

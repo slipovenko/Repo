@@ -6,6 +6,7 @@ use ZMQ::Constants qw(:all);
 use Data::MessagePack;
 use Data::Dumper;
 use Switch;
+use Mason;
 
 sub new {
 	my ($proto, %params) = @_;                 	# извлекаем имя класса или указатель на объект
@@ -41,7 +42,7 @@ sub run {
 	
 	# send introduce
 	$self->send('introduce');
-
+	print "Send introduce\n";
 	# listen socket, in loop
 	while (1) {
 		my $mp = new Data::MessagePack;
@@ -62,15 +63,30 @@ sub run {
 				last;
 			}
 			case "call" {
-				
 				my  $func = $cmd->{body}->{function};
 				print "Call of $func received\n";
-				if ($func &&  exists $self->{function_table}->{$func}) { 
-					my $resp = $self->{function_table}->{$func}->($cmd->{body}->{parameters});
+				if (exists $self->{function_table}->{$func}) { 
+					print "call API received... ";
+					print Dumper $cmd if $self->{debug};
+					my $body = $self->{function_table}->{$func}->($cmd->{body}->{parameters});
 					my $response = $self->response('result', $cmd);
-					$response->{body}->{result} = $resp;
+					$response->{body}->{result} = $body;
+					$self->{sock}->sendmsg($mp->pack($response)); 
+				} elsif (exists $self->{template_table}->{$func}) {
+					print "call TEMPLATE $func html\n";
+					
+           			my @body;
+					push(@body,200);
+					push(@body,['Content-type','text/html; charset=utf-8']);
+					my $html = $self->{template_table}->{$func}->($cmd->{body}->{parameters});
+					push(@body,[$html]);
+					my $response = $self->response('result', $cmd);
+					$response->{body}->{result} = \@body;
 					$self->{sock}->sendmsg($mp->pack($response));
+				} else {
+					print "ERROR\n";
 				}
+				print "Done\n";
 			}
 			else {  
 				print "Unknown command received - ignore\n";
@@ -78,7 +94,6 @@ sub run {
 			
 		}
 		delete($self->{cmd});
-
 	}
 }
 
@@ -102,7 +117,6 @@ sub send {
 			$body->{module} = $opt{module};
 			$body->{function} = $opt{function};
 			$body->{parameters} = $opt{parameters};
-			
 		} 
 		else { 
 			die "Unknown command $cmd!";
@@ -125,6 +139,12 @@ sub send {
 	$msg = $self->{sock}->recvmsg();
 	my $resp = $mp->unpack( $msg->data() );
 	$msg->close();
+	if ($resp->{body}->{result}) {
+		return $resp->{body}->{result};
+	} else {
+		print "Caught exception ".(Dumper $resp->{body})."\n\n";
+		return;
+	}
 
 }
 
