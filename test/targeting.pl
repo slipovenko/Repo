@@ -28,9 +28,14 @@ foreach my $t (@{$tests}) {
     printf(">> app:%d, amount:%d, attr:{%s}\n", $t->{appid}, $t->{amount}, join('&', @attr) );
     my $resp = call(
                 sock => $sock,
-                module => 'targeting',
+                module => 'ModTargeting',
                 function => 'targeting',
-                parameters => $t);
+                parameters => $t,
+                version => 1);
+    if (defined($resp->{body}->{exception})){
+    	die (Dumper($resp));
+    }
+#    print "result\n" . Dumper($resp);
     printf("<< %s:%s\n", $_, $resp->{body}->{result}->{$_}) foreach sort(keys %{$resp->{body}->{result}});
     print Dumper($resp->{body}->{result}->{debug}) if($resp->{body}->{result}->{debug});
     print "\n";
@@ -41,15 +46,19 @@ sub call {
 	my (%opt) = @_;
 
 	my $mp = new Data::MessagePack;
-	my $msg = new ZMQ::Message( $mp->pack( {
+	my $mess = $mp->pack( {
 		"command" => 'call',
 		"body" => {
 			module => $opt{module},
 			function => $opt{function},
-			parameters => $opt{parameters}
+			parameters => $opt{parameters},
+			version => $opt{version}
 		},
 		"actionid" => time().$$
-	} ) );
+	} );
+	my $msg = new ZMQ::Message( $mess );
+
+    # print "message to be send: " . Dumper( $mess );
 
 	$opt{sock}->sendmsg( $msg );
 	$msg = $opt{sock}->recvmsg();

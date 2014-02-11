@@ -4,27 +4,18 @@ use strict;
 use Bit::Vector;
 use Data::Dumper;
 use ReachMedia::DBRedis;
-use ReachMedia::ModuleRuntime;
-
-our @ISA = ("ReachMedia::ModuleRuntime");
-our @INTERFACE = qw(targeting);
-
-@PARENT::ISA = @ISA;
 
 sub new
 {
 	my $class = shift;
+    my $self = {};
 	my (%params) = @_;
-	my $self = $class->PARENT::new(name=>'targeting', desc=>'Targeting', debug=> $params{debug} || 0);
+    print "Targeting:new parameters : " . Dumper(@_);
+    $self->{debug} = $params{debug};
 
     $self->{_redis} = ReachMedia::DBRedis->new()->connect('localhost', '6379');
 
 	bless($self, $class);
-
-	# Define interface functions
-	foreach my $i (@INTERFACE) {
-        $self->{function_table}->{$i} = sub { $self->$i(@_);};
-	}
 
     return $self;
 }
@@ -34,6 +25,9 @@ sub targeting {
     my $params = shift;
     my $conf = {};
     my $response = {};
+
+    print "Targeting::targeting call parameters : " . Dumper($params);
+    # print "Targeting::targeting debug: " . $self->{debug};
 
     if(!exists($params->{appid})) {return $response;};
     if(!exists($params->{amount})) {$params->{amount} = 1;};
@@ -73,7 +67,7 @@ sub targeting {
         $objects->{$conf->{tids}->{$tid}->{p}}->{$conf->{tids}->{$tid}->{u}} = int($conf->{tids}->{$tid}->{w});
     }
     $conf->{mask} = $conf->{mask}->to_Bin();
-    print Dumper($objects) if($self->{debug});
+    print "Targeting::targeting objects: " . Dumper($objects) ;#if($self->{debug});
 
     my @priorities = sort{int($b) <=> int($a)}(keys %{$objects});
     my $p = shift(@priorities);

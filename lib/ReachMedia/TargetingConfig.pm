@@ -10,19 +10,12 @@ use Switch;
 use DBI;
 use Bit::Vector;
 use ReachMedia::DBRedis;
-use ReachMedia::ModuleRuntime;
-
-our @ISA = ("ReachMedia::ModuleRuntime");
-our @INTERFACE = qw(edit insert update delete select status);
-
-@PARENT::ISA = @ISA;
 
 sub new
 {
 	my $class = shift;
 	my (%params) = @_;
-	my $self = $class->PARENT::new(name=>'targeting-config', desc=>'Targeting Configurator', debug=> $params{debug} || 0);
-
+	my $self = {};
     my $host = "127.0.0.1";
     my $port = "5432";
     my $dbname = "targeting";
@@ -41,11 +34,6 @@ sub new
     $self->{_json} = JSON::XS->new->latin1;
 
 	bless($self, $class);
-
-	# Define interface functions
-	foreach my $i (@INTERFACE) {
-        $self->{function_table}->{$i} = sub { $self->$i(@_);};
-	}
 
     return $self;
 }
