@@ -76,7 +76,7 @@ Targeting.prototype = {
     		}
     	}
     	xhr.ontimeout = function (){
-    		if (typeof this.timeoutFunction !== 'undefined'){
+    		if (typeof timeoutFunction !== 'undefined'){
     			timeoutFunction.call(targetObj, url);
     		}else{
     			errorFunction.call(targetObj, '408' /* request timeout */, '', '');
