@@ -64,6 +64,11 @@ Targeting.prototype = {
     	var targetElement = document.getElementById(this._targetDivId);
     	targetElement.innerHTML = "<p>timeout</p>";
     },
+
+    onJSONParseError : function(json){
+        var targetElement = document.getElementById(this._targetDivId);
+        targetElement.innerHTML = "JSON parse error: <pre>"+json+"</pre>";
+    },
     
     getTargetData : function(url, successFunction, errorFunction, timeoutFunction){
     	var xhr = this.getXHR();
@@ -170,16 +175,19 @@ Targeting.prototype = {
     	if ( window.JSON && window.JSON.parse ) {
     		// Support: Android 2.3
     		// Workaround failure to string-cast null input
-    		return window.JSON.parse( data + "" );
+            try{
+    		    return window.JSON.parse( data + "" );
+            }catch(e){
+                this.onJSONParseError(data);
+            }
     	}
-    
     	var requireNonComma,
     		depth = null,
-    		str = jQuery.trim( data + "" );
+    		str = this.trim( data + "" );
     
     	// Guard against invalid (and possibly dangerous) input by ensuring that nothing remains
     	// after removing valid tokens
-    	return str && !jQuery.trim( str.replace( rvalidtokens, function( token, comma, open, close ) {
+    	return str && !this.trim( str.replace( rvalidtokens, function( token, comma, open, close ) {
     
     		// Force termination if we see a misplaced comma
     		if ( requireNonComma && comma ) {
@@ -204,6 +212,21 @@ Targeting.prototype = {
     		return "";
     	}) ) ?
     		( Function( "return " + str ) )() :
-    		jQuery.error( "Invalid JSON: " + data );
+    		this.onJSONParseError( "Invalid JSON: " + data );
     },
+    
+    //from jQuery
+	trim: "".trim && !"".trim.call("\uFEFF\xA0") ?
+		function( text ) {
+			return text == null ?
+				"" :
+				"".trim.call( text );
+		} :
+
+		// Otherwise use our own trimming functionality
+		function( text ) {
+			return text == null ?
+				"" :
+				( text + "" ).replace( /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, "" );
+	},
 }
