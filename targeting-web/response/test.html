@@ -1,0 +1,15 @@
+﻿<html>
+<head>
+    <script src="targeting.js"></script>
+    <script>
+        var targeting = new Targeting();
+        function showTargetBlock(targetDiv){
+            targeting.showTargetBlock(targetDiv);
+        }
+    </script>
+</head>
+<body>
+<div id="targetDiv"></div>
+<button name="run" value="RUN" onclick="showTargetBlock('targetDiv');">RUN</button>
+</body>
+</html>

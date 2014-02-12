@@ -1,0 +1,1 @@
+[{"image": "test.jpg","link": 	{ 	"url": "http://zzz.ru/test?zzz=3",	"text": "url1 text"	},"text": "some text"},{"image": "test2.jpg","link": { 	"url": "http://zzz.ru/test?zzz=7",	"text": "url2 text"	},"text": "some text 2"}]
