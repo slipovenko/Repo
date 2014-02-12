@@ -1,4 +1,5 @@
-﻿function Targeting(){
+﻿function Targeting(amount){
+    this._amount = amount;
     this._onLoadingStartFunction = this.onAjaxLoadingStart;
     this._onLoadingFinishFunction = this.onAjaxLoadingFinish;
 }
@@ -6,6 +7,7 @@
 Targeting.prototype = {
     test_url : "http://10.0.3.105/test.json",
     _targetDivId : null,
+    _amount : 1,
     _onLoadingStartFunction : null,
     _onLoadingFinishFunction : null,
     
@@ -15,7 +17,11 @@ Targeting.prototype = {
     },
 
     getCallParameters : function(){
-    	return "";
+        var paramStr = "";
+        if (typeof this._amount !== 'undefined' && !isNaN(parseInt(this._amount))){
+            paramStr += "?amount="+this._amount;
+        }
+    	return paramStr;
     },
 
     setOnLoadingStartFunction : function(onLoadingStartFunction){
