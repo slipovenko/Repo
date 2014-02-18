@@ -1,13 +1,17 @@
-﻿function Targeting(amount){
+﻿function Targeting(appId, userContext, amount){
     this._amount = amount;
+    this._appId = appId;
+    this._userContext = userContext;
     this._onLoadingStartFunction = this.onAjaxLoadingStart;
     this._onLoadingFinishFunction = this.onAjaxLoadingFinish;
 }
 
 Targeting.prototype = {
-    test_url : "http://10.0.3.105/test.json",
+    test_url : "http://10.0.3.105/target",
     _targetDivId : null,
     _amount : 1,
+    _appId : null,
+    _userContext : null,
     _onLoadingStartFunction : null,
     _onLoadingFinishFunction : null,
     
@@ -18,8 +22,22 @@ Targeting.prototype = {
 
     getCallParameters : function(){
         var paramStr = "";
-        if (typeof this._amount !== 'undefined' && !isNaN(parseInt(this._amount))){
-            paramStr += "?amount="+this._amount;
+        if (typeof this._appId === 'undefined' || this._appId == null){
+            throw new Error("appId not defined");
+        }
+        paramStr += "?appId=" + this._appId;
+
+        if (typeof this._userContext === 'undefined' || this._userContext == null){
+            throw new Error("user context not defined");
+        }
+        //userContext is a string with params coded in base64
+        paramStr += "&userContext=" + this._userContext;
+
+        if (typeof this._amount !== 'undefined'){
+            var amount = parseInt(this._amount);
+            if (!isNaN(amount)){
+                paramStr += "&amount="+amount;
+            }
         }
     	return paramStr;
     },

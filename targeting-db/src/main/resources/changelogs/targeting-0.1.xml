@@ -10,7 +10,7 @@
         <tagDatabase tag="0.1"/>
     </changeSet>
 
-    <changeSet id="0.1-1" author="svnovikov" context="schemas">
+    <changeSet id="0.1-1" author="svnovikov" context="schemas" runOnChange="true">
         <sql>
             CREATE SCHEMA dict;
             CREATE SCHEMA obj;
@@ -21,17 +21,17 @@
         </sql>
         <rollback>
             <sql>
-                DROP SCHEMA dict;
-                DROP SCHEMA obj;
-                DROP SCHEMA conf;
-                DROP SCHEMA tmp;
+                DROP SCHEMA dict CASCADE;
+                DROP SCHEMA obj CASCADE;
+                DROP SCHEMA conf CASCADE;
+                DROP SCHEMA tmp CASCADE;
                 DROP EXTENSION "uuid-ossp";
                 DROP EXTENSION "hstore";
             </sql>
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-2" author="svnovikov" context="schemas">
+    <changeSet id="0.1-2" author="svnovikov" context="schemas" runOnChange="true">
         <createTable tableName="type" schemaName="dict" remarks="Типы контента">
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
@@ -100,7 +100,7 @@
                                  onDelete="CASCADE" onUpdate="CASCADE"/>
     </changeSet>
 
-    <changeSet id="0.1-3" author="svnovikov" context="schemas">
+    <changeSet id="0.1-3" author="svnovikov" context="schemas" runOnChange="true">
         <createTable tableName="app" schemaName="obj" remarks="Приложения">
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
@@ -127,6 +127,12 @@
             </column>
             <column name="flink" type="varchar" remarks="Ссылка на файл объекта">
                 <constraints nullable="false"/>
+            </column>
+            <column name="link_text" type="varchar" remarks="Текст ссылки">
+                <constraints nullable="true"/>
+            </column>
+            <column name="short_description" type="varchar" remarks="Краткий пояснительный текст рядом с картинкой">
+                <constraints nullable="true"/>
             </column>
             <column name="ilink" type="varchar" remarks="Ссылка на изображение объекта">
                 <constraints nullable="false"/>
@@ -216,7 +222,7 @@
                                  onDelete="CASCADE" onUpdate="CASCADE"/>
     </changeSet>
 
-    <changeSet id="0.1-4" author="svnovikov" context="schemas">
+    <changeSet id="0.1-4" author="svnovikov" context="schemas" runOnChange="true">
         <createTable tableName="status" schemaName="conf" remarks="Статус конфигурации">
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
@@ -273,7 +279,7 @@
                              columnNames="tid, cid"/>
     </changeSet>
 
-    <changeSet id="0.1-5" author="svnovikov" context="initdata">
+    <changeSet id="0.1-5" author="svnovikov" context="initdata" runOnChange="true">
         <insert tableName="type" schemaName="dict">
             <column name="id" valueNumeric="0"/>
             <column name="mtype" value="uknown"/>
@@ -298,7 +304,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-6" author="svnovikov" context="initdata">
+    <changeSet id="0.1-6" author="svnovikov" context="initdata" runOnChange="true">
         <insert tableName="priority" schemaName="dict">
             <column name="value" valueNumeric="10"/>
             <column name="name" value="Низкий"/>
@@ -318,7 +324,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-7" author="svnovikov" context="initdata">
+    <changeSet id="0.1-7" author="svnovikov" context="initdata" runOnChange="true">
         <insert tableName="attr" schemaName="dict">
             <column name="tag" value="geo"/>
             <column name="name" value="Гео-локация"/>
@@ -343,7 +349,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-8" author="svnovikov" context="initdata">
+    <changeSet id="0.1-8" author="svnovikov" context="initdata" runOnChange="true">
         <createProcedure>
             CREATE OR REPLACE FUNCTION dict.attr_add_value(character varying, character varying, character varying)
               RETURNS void AS
@@ -547,7 +553,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-9" author="svnovikov" context="schemas">
+    <changeSet id="0.1-9" author="svnovikov" context="schemas" runOnChange="true">
         <createProcedure>
             CREATE OR REPLACE FUNCTION obj.app_on_insert() RETURNS TRIGGER AS $$
             BEGIN
@@ -580,7 +586,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-10" author="svnovikov" context="schemas">
+    <changeSet id="0.1-10" author="svnovikov" context="schemas" runOnChange="true">
         <createProcedure>
             CREATE OR REPLACE FUNCTION obj.group_get_attr_as_json(id integer)
               RETURNS json AS
@@ -603,7 +609,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-11" author="svnovikov" context="schemas">
+    <changeSet id="0.1-11" author="svnovikov" context="schemas" runOnChange="true">
         <createTable tableName="transactions" schemaName="tmp" remarks="Список активных транзакций">
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
@@ -712,7 +718,7 @@
                                  onDelete="CASCADE" onUpdate="CASCADE"/>
     </changeSet>
 
-    <changeSet id="0.1-12" author="svnovikov" context="testdata">
+    <changeSet id="0.1-12" author="svnovikov" context="testdata" runOnChange="true">
         <sql>
             -- Test objects
             INSERT INTO obj.app
@@ -725,18 +731,18 @@
             SELECT setval('obj.app_id_seq', 4);
 
             INSERT INTO obj.ado
-            (id, appid, uuid, flink, ilink, tid, name, attr, deleted)
+            (id, appid, uuid, flink, ilink, link_text, short_description, tid, name, attr, deleted)
             VALUES
-            (1, 1001, 'd2fbf3e5-3cc0-4def-a512-0b87e69138c8', 'http://test.ru/0001.swf', 'http://test.ru/0001.jpg', 3, 'Баннер 001', NULL, false),
-            (2, 1001, '6ee9ccc4-2cb6-45fd-b4ae-c7a09f8faee1', 'http://test.ru/0002.swf', 'http://test.ru/0002.jpg', 3, 'Баннер 002', NULL, true),
-            (3, 1002, '84de256f-ba57-4c6f-ae6d-d9901bb302f6', 'http://test.ru/0003.swf', 'http://test.ru/0003.jpg', 3, 'Баннер 003', NULL, true),
-            (4, 1003, '881aef88-b809-419a-864f-0d6ef69a1581', 'http://test.ru/0004.swf', 'http://test.ru/0004.jpg', 2, 'Баннер 004', NULL, false),
-            (5, 1003, '0f04b4c5-d6d4-4291-9f8f-c8224783cb80', 'http://test.ru/0005.swf', 'http://test.ru/0005.jpg', 1, 'Баннер 005', NULL, false),
-            (6, 2147483647, 'fd0a6740-d947-4d4d-99f6-ba9edf13f79a', 'http://test.ru/Lada.swf', 'http://test.ru/Lada.jpg', 2, 'Лада', NULL, false),
-            (7, 2147483647, '74d62fc3-4b87-4f11-862d-14a111af48b7', 'http://test.ru/Zhiguli.swf', 'http://test.ru/Zhiguli.jpg', 2, 'Жигули', NULL, false),
-            (8, 2147483647, 'fcac2d9b-0ada-4bb0-8bfa-e3db5bd791ce', 'http://test.ru/KAMAZ.swf', 'http://test.ru/KAMAZ.jpg', 1, 'КАМАЗ', NULL, false),
-            (9, 2147483647, '8268db28-4efc-4387-a3a6-414bf5e6badd', 'http://test.ru/B737.swf', 'http://test.ru/B737.jpg', 3, 'Boing 737', NULL, false),
-            (10, 2147483647, '2471ccae-c4bf-4db5-834c-0f7168edf7c3', 'http://test.ru/A330.swf', 'http://test.ru/A330.jpg', 3, 'Airbus A330', NULL, false);
+            (1, 1001, 'd2fbf3e5-3cc0-4def-a512-0b87e69138c8', 'http://test.ru/0001.swf', 'http://test.ru/0001.jpg', 'Банер 001', 'Супер мега банер 001', 3, 'Баннер 001', NULL, false),
+            (2, 1001, '6ee9ccc4-2cb6-45fd-b4ae-c7a09f8faee1', 'http://test.ru/0002.swf', 'http://test.ru/0002.jpg', 'Банер 002', 'Супер мега банер 002',3, 'Баннер 002', NULL, true),
+            (3, 1002, '84de256f-ba57-4c6f-ae6d-d9901bb302f6', 'http://test.ru/0003.swf', 'http://test.ru/0003.jpg', 'Банер 003', 'Супер мега банер 003',3, 'Баннер 003', NULL, true),
+            (4, 1003, '881aef88-b809-419a-864f-0d6ef69a1581', 'http://test.ru/0004.swf', 'http://test.ru/0004.jpg', 'Банер 004', 'Супер мега банер 004',2, 'Баннер 004', NULL, false),
+            (5, 1003, '0f04b4c5-d6d4-4291-9f8f-c8224783cb80', 'http://test.ru/0005.swf', 'http://test.ru/0005.jpg', 'Банер 005', 'Супер мега банер 005',1, 'Баннер 005', NULL, false),
+            (6, 2147483647, 'fd0a6740-d947-4d4d-99f6-ba9edf13f79a', 'http://test.ru/Lada.swf', 'http://test.ru/Lada.jpg', 'Лада', 'Лада Калина', 2, 'Лада', NULL, false),
+            (7, 2147483647, '74d62fc3-4b87-4f11-862d-14a111af48b7', 'http://test.ru/Zhiguli.swf', 'http://test.ru/Zhiguli.jpg', 'Автомобили Жигули', 'Автомобили Жигули по выгодным ценам', 2, 'Жигули', NULL, false),
+            (8, 2147483647, 'fcac2d9b-0ada-4bb0-8bfa-e3db5bd791ce', 'http://test.ru/KAMAZ.swf', 'http://test.ru/KAMAZ.jpg', 'КАМАЗ', 'Нужен КАМАЗ - купи у нас', 1, 'КАМАЗ', NULL, false),
+            (9, 2147483647, '8268db28-4efc-4387-a3a6-414bf5e6badd', 'http://test.ru/B737.swf', 'http://test.ru/B737.jpg', 'Самолеты boing', 'Самолеты boing. Прямые поставки с кладбища самолетов в пустыне Невада по цене новых', 3, 'Boing 737', NULL, false),
+            (10, 2147483647, '2471ccae-c4bf-4db5-834c-0f7168edf7c3', 'http://test.ru/A330.swf', 'http://test.ru/A330.jpg', 'Летайте самолетами Airbus', 'Самолеты Airbus - комфортабельные как автобус', 3, 'Airbus A330', NULL, false);
             SELECT setval('obj.ado_id_seq', 10);
 
             INSERT INTO obj."group"
@@ -778,7 +784,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="0.1-13" author="svnovikov" context="testdata">
+    <changeSet id="0.1-13" author="svnovikov" context="testdata" runOnChange="true">
         <sql>
             -- Test configuration
             INSERT INTO conf.current

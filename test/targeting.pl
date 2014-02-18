@@ -35,7 +35,7 @@ foreach my $t (@{$tests}) {
     if (defined($resp->{body}->{exception})){
     	die (Dumper($resp));
     }
-#    print "result\n" . Dumper($resp);
+    print "result\n" . Dumper($resp);
     printf("<< %s:%s\n", $_, $resp->{body}->{result}->{$_}) foreach sort(keys %{$resp->{body}->{result}});
     print Dumper($resp->{body}->{result}->{debug}) if($resp->{body}->{result}->{debug});
     print "\n";

@@ -10,6 +10,8 @@ use Switch;
 use DBI;
 use Bit::Vector;
 use ReachMedia::DBRedis;
+use Data::MessagePack;
+use ReachMedia::EncodeUtils;
 
 sub new
 {
@@ -443,6 +445,18 @@ sub load
 
         # Setting config state
         $redis->set("app:$appid:c", "$cid:$mlength:$tstamp");
+
+        #put objects to redis
+        #store objects in hash 'objs'
+        $sql = "SELECT uuid, ilink, link_text, short_description, flink FROM obj.ado WHERE deleted = false";
+        $stha = $dbh->prepare($sql);
+        $stha->execute();
+        if ( $stha->err ) { $response .= sprintf("DB ERROR #%s: '%s'\n", $stha->err, $stha->errstr); $response .= $sql."\n";}
+        while(my $v = $stha->fetchrow_hashref()){
+            my $objectValues = {'ilink' => $v->{ilink}, 'link_text' => $v->{link_text}, 'short_description' => $v->{short_description}, 'flink' => $v->{flink}};
+            $redis->hset('objs', $v->{uuid}, encodeBase64MessagePack($objectValues));
+        }
+        
         $redis->exec();
 
         $sql = "UPDATE conf.status SET value = 0, cid = ? ".
