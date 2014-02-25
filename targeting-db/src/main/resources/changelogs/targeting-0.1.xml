@@ -158,6 +158,9 @@
                                  referencedTableName="type" referencedTableSchemaName="dict"
                                  referencedColumnNames="id"
                                  onDelete="RESTRICT" onUpdate="RESTRICT"/>
+        <createIndex schemaName="obj" tableName="ado" indexName="ado_name_idx" unique="false">
+            <column name="name" />
+        </createIndex>
         <createTable tableName="group" schemaName="obj" remarks="Группы рекламных материалов">
             <column name="id" type="integer" autoIncrement="true" remarks="Уникальный ИД">
                 <constraints primaryKey="true" nullable="false"/>
